@@ -43,7 +43,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=
+CFLAGS=-m64 -lm
 
 # CC Compiler Flags
 CCFLAGS=
@@ -53,7 +53,7 @@ CXXFLAGS=
 FFLAGS=
 
 # Assembler Flags
-ASFLAGS=
+ASFLAGS=--64
 
 # Link Libraries and Options
 LDLIBSOPTIONS=
@@ -66,27 +66,27 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS} -lm
 
-${OBJECTDIR}/main.o: main.c
+${OBJECTDIR}/main.o: main.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.c
 
-${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_network.c
+${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_network.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/network_types
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/feedforward_network.o network_types/feedforward_network.c
 
-${OBJECTDIR}/utils/math.o: utils/math.c
+${OBJECTDIR}/utils/math.o: utils/math.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/math.o utils/math.c
 
-${OBJECTDIR}/utils/verbose.o: utils/verbose.c
+${OBJECTDIR}/utils/verbose.o: utils/verbose.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/verbose.o utils/verbose.c
 
-${OBJECTDIR}/utils/weight_initializer.o: utils/weight_initializer.c
+${OBJECTDIR}/utils/weight_initializer.o: utils/weight_initializer.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/weight_initializer.o utils/weight_initializer.c

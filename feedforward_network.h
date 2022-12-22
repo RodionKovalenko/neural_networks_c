@@ -20,8 +20,27 @@ extern "C" {
 
     typedef struct feedforward_network {
         double **targets;
+        double ***targets_3d;
+        double ****targets_4d;
+
+        int **targets_int;
+        int ***targets_int_3d;
+        int ****targets_int_4d;
         int training_mode;
-        double **inputs;
+        // dataset for 1-dimensional array [number of record][record dimensions]
+        // each row is separate record
+        double **dataset;
+        // for 2-dimensional array, first dimension is for number of records
+        double ***dataset_3d;
+        // for 3-dimensional array, e.g. for image data
+        double ****dataset_4d;
+
+        int **dataset_int;
+        // for 2-dimensional array, first dimension is for number of records
+        int ***dataset_3d_int;
+        // for 3-dimensional array, e.g. for image data
+        int ****dataset_4d_int;
+
         //input array dimensions, i.e. number of row/colums/etc 
         //e.g., {2, 1}: number of rows 2, number of colums: 1
         int *input_dims;
@@ -48,6 +67,7 @@ extern "C" {
             int n_h_layers,
             int n_h_neurons,
             int n_out_neurons,
+            double **targets,
             double learning_rate
             );
 
@@ -59,6 +79,8 @@ extern "C" {
             int n_h_neurons,
             int n_);
 
+    feedforward_network fit(feedforward_network ffn, int num_iterations, int training_mode);
+    feedforward_network forward(feedforward_network ffn);
 
 #ifdef __cplusplus
 }

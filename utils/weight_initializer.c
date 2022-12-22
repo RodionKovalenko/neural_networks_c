@@ -4,14 +4,22 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <time.h>
 
-double ** get_random_normalized_weights(double **weight_matrix, int n_input, int n_output) {
-    int i, j;
 
-    for (i = 0; i < n_input; i++) {
-        for (j = 0; j < n_output; j++) {
-            weight_matrix[i][j] = 0;
+double ** init_random_weights(double **weight_matrix, int n_output, int n_input) {
+    int i, j;
+    
+    double min = -pow((6.0 / (double) (n_input + n_output)), 0.5);
+    double max = pow((6.0 / (double)(n_input + n_output)), 0.5);
+
+    printf("min value %f, max value: %f \n", min, max);
+    printf("n_output %d, n_input %d \n", n_output, n_input);
+    
+    for (i = 0; i < n_output; i++) {
+        for (j = 0; j < n_input; j++) {
+            weight_matrix[i][j] = (double)rand() * ( max - min) / (double)RAND_MAX + min;
         }
     }
 

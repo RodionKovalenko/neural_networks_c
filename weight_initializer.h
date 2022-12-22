@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 
-
+double ** init_random_weights(double **weight_matrix, int n_input, int n_output);
 
 #ifdef __cplusplus
 }

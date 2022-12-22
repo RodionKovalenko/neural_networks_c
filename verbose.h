@@ -20,8 +20,10 @@ extern "C" {
 #include "layer.h"
 #include "feedforward_network.h"
 
-    void print_layer(struct layer _layer);
+    void print_layer(layer *_layer);
     void print_network(feedforward_network network);
+    void print_matrix_int(int **matrix, int rows, int columns);
+    void print_matrix_double(double **matrix, int rows, int columns);
 
 #ifdef __cplusplus
 }

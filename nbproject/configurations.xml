@@ -38,18 +38,25 @@
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
-    <conf name="Debug" type="1">
+    <conf name="Debug" type="1" platformSpecific="true">
       <toolsSet>
         <compilerSet>default</compilerSet>
+        <platform>2</platform>
         <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
+        <rebuildPropChanged>true</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
           <stripSymbols>true</stripSymbols>
+          <architecture>2</architecture>
           <standard>3</standard>
+          <commandLine>-lm</commandLine>
         </cTool>
+        <asmTool>
+          <architecture>2</architecture>
+        </asmTool>
         <linkerTool>
+          <linkerCopySharedLibs>true</linkerCopySharedLibs>
           <commandLine>-lm</commandLine>
         </linkerTool>
       </compileType>
@@ -98,6 +105,9 @@
         <asmTool>
           <developmentMode>5</developmentMode>
         </asmTool>
+        <linkerTool>
+          <commandLine>-lm</commandLine>
+        </linkerTool>
       </compileType>
       <item path="activation.h" ex="false" tool="3" flavor2="0">
       </item>

@@ -20,6 +20,7 @@ extern "C" {
  typedef struct layer {
         double **weights;
         double **inputs;
+        double **outputs;
         double **gradients;
         double **prev_gradients;
         struct layer *previous_layer;
@@ -29,6 +30,9 @@ extern "C" {
         int num_input_rows;
         int num_input_columns;
         char *activation_type;
+        char *layer_name;
+        // beginning with 1
+        int layer_index;
     } layer;
 
 
