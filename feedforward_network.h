@@ -41,9 +41,9 @@ extern "C" {
         // for 3-dimensional array, e.g. for image data
         int ****dataset_4d_int;
 
-        //input array dimensions, i.e. number of row/colums/etc 
-        //e.g., {2, 1}: number of rows 2, number of colums: 1
+        //input array dimensions, i.e. number of [records][colums][rows]
         int *input_dims;
+        int num_records;
         // number of input params, e.g 2 (rows and columns)
         int num_input_params;
         int n_input_rows;
@@ -57,12 +57,13 @@ extern "C" {
         // learning rate/
         double learning_rate;
         struct layer *layers;
+        int minibatch_size;
     } feedforward_network;
-
 
     feedforward_network init_ffn(
             double **inputs,
             int *input_dims,
+            int input_num_records,
             int num_input_params,
             int n_h_layers,
             int n_h_neurons,
@@ -80,7 +81,7 @@ extern "C" {
             int n_);
 
     feedforward_network fit(feedforward_network ffn, int num_iterations, int training_mode);
-    feedforward_network forward(feedforward_network ffn);
+    void forward(feedforward_network ffn, int record_index);
 
 #ifdef __cplusplus
 }

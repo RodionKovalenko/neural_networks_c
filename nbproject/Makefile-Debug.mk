@@ -37,6 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/network_types/feedforward_network.o \
+	${OBJECTDIR}/utils/array.o \
 	${OBJECTDIR}/utils/math.o \
 	${OBJECTDIR}/utils/verbose.o \
 	${OBJECTDIR}/utils/weight_initializer.o
@@ -75,6 +76,11 @@ ${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_netw
 	${MKDIR} -p ${OBJECTDIR}/network_types
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/feedforward_network.o network_types/feedforward_network.c
+
+${OBJECTDIR}/utils/array.o: utils/array.c nbproject/Makefile-${CND_CONF}.mk
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/array.o utils/array.c
 
 ${OBJECTDIR}/utils/math.o: utils/math.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils

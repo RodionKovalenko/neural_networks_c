@@ -24,56 +24,57 @@
 
 double** get_input_matrix(int input_r, int input_c) {
     double **input_matrix = (double**) malloc(input_r * (sizeof (double)));
-    int i;
+    int i, j;
 
-    for (i = 0; i < input_r; i++)
+    for (i = 0; i < input_r; i++) {
         input_matrix[i] = (double*) malloc(input_c * sizeof (double));
+    }
 
-    input_matrix[0][0] = 0.1;
-    input_matrix[1][0] = 0.5;
+    for (i = 0; i < input_r; i++) {
+        for (j = 0; j < input_c; j++) {
+            input_matrix[i][j] = 0.1;
+        }
+    }
 
     return input_matrix;
 }
 
 double** get_target_matrix(int input_r, int input_c) {
     double **input_matrix = (double**) malloc(input_r * sizeof (double));
-    int i;
+    int i, j;
 
     for (i = 0; i < input_r; i++)
         input_matrix[i] = (double*) malloc(input_c * sizeof (double));
 
-    input_matrix[0][0] = 0.3;
-    input_matrix[1][0] = 0.8;
+    for (i = 0; i < input_r; i++) {
+        for (j = 0; j < input_c; j++) {
+            input_matrix[i][j] = 0.5;
+        }
+    }
 
     return input_matrix;
 }
 
 int main(int argc, char** argv) {
-    int input_r = 2;
-    int input_c = 1;
+    // number of data records
+    int input_num_records = 2;
+    // number of dimensions in record
+    int input_r = 1;
+    int input_c = 4;
 
     int n_h_layers = 2;
-    int n_h_neurons = 4;
-    int n_out_neurons = 9;
+    int n_h_neurons = 5;
+    int n_out_neurons = 3;
 
-    int num_dim[] = {input_r, input_c};
+    int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = 2;
 
-    int weight_r = 3;
-    int weight_c = 2;
-
-    int output_r = 2;
-
     double learning_rate = 0.01;
-    int num_iterations = 100;
+    int num_iterations = 2;
     int training_mode = 0;
 
-    double **input_matrix = get_input_matrix(input_r, input_c);
-    double **target_matrix = get_input_matrix(input_r, input_c);
-
-    double input_text[2][1];
-
-    printf("inputs \n");
+    double **input_matrix = get_input_matrix(input_num_records, input_c);
+    double **target_matrix = get_input_matrix(n_out_neurons, input_c);
 
     set_verbose(1);
 
@@ -81,15 +82,16 @@ int main(int argc, char** argv) {
             input_matrix,
             num_dim,
             num_dim_params,
+            input_num_records,
             n_h_layers,
             n_h_neurons,
             n_out_neurons,
             target_matrix,
             learning_rate
             );
-    
+
     fit(feedforward_net, num_iterations, training_mode);
-    
+
     return (EXIT_SUCCESS);
 }
 

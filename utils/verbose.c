@@ -8,6 +8,9 @@
 #include "../layer.h"
 #include "../feedforward_network.h"
 
+// generic implemenation of print_matrix
+#define print_matrix(a, b, c) _Generic(a, double**:print_matrix_double, int**:print_matrix_int)(a, b, c)
+
 void print_matrix_double(double **matrix, int rows, int columns) {
     int i, j;
 
@@ -30,18 +33,15 @@ void print_matrix_int(int **matrix, int rows, int columns) {
     }
 }
 
-
-// generic implemenation of print_matrix
-#define print_matrix(a, b, c) _Generic(a, double**:print_matrix_double, int**:print_matrix_int)(a, b, c)
-
-
 void print_layer(layer *_layer) {
     printf("layer index : %d \n", _layer->layer_index);
     printf("number of layer inputs and outputs: (%d => %d) \n", _layer->num_inputs, _layer->num_outputs);
+    printf("number of layer rows and columns: (%d => %d) \n", _layer->num_input_rows, _layer->num_input_columns);
+
 
     if (_layer->weights != NULL) {
-        printf("weight matrix size: (%d x %d) \n", _layer->num_outputs, _layer->num_inputs);
-        
+        printf("weight matrix size: number of outputs(%d, number of inputs %d) \n", _layer->num_outputs, _layer->num_inputs);
+
         print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
     }
 
@@ -61,6 +61,8 @@ void print_layer(layer *_layer) {
             tmp_next_layer = tmp_next_layer->next_layer;
         }
     }
+
+  
 }
 
 void print_network(feedforward_network network) {

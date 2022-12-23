@@ -58,7 +58,7 @@ double sigmoid_value(double value) {
     return (1.0 / (1.0 + exp(-value)));
 }
 
-double** sigmoid_to_matrix(double** matrix, int row, int col) {
+double** sigmoid_to_matrix(double **matrix, int row, int col) {
     int i, j;
 
     for (i = 0; i < row; i++) {

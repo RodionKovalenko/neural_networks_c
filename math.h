@@ -21,12 +21,11 @@ extern "C" {
     double get_random_value();
     double** init_weight_matrix(int weight_r, int weight_c);
     double sigmoid_value(double value);
-    double** sigmoid_to_matrix(double** matrix, int row, int col);
+    double** sigmoid_to_matrix(double **matrix, int row, int col);
     double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_sum(double **matrix_1, double **matrix_2, int row, int col);
     double** sigmoid_derivative(double **matrix, int row, int col);
     double** matrix_transpose(double **matrix, int row, int col);
-    void print_matrix(double** matrix, int row, int col);
     double** hadamard_product(double ** matrix_1, double **matrix_2, int row, int col);
     double** multiply_scalar(double **matrix, double scalar, int row, int col);
 
