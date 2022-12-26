@@ -21,6 +21,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>utils/array.c</itemPath>
+      <itemPath>utils/clear_memory.c</itemPath>
       <itemPath>network_types/feedforward_network.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>utils/math.c</itemPath>
@@ -84,6 +85,8 @@
       </item>
       <item path="utils/array.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/verbose.c" ex="false" tool="0" flavor2="0">
@@ -138,6 +141,8 @@
       <item path="network_types/global.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="utils/array.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
       </item>

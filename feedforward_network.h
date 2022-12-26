@@ -59,6 +59,9 @@ extern "C" {
     void forward(feedforward_network ffn, double *data_X);
     double **apply_activation(layer *_layer, feedforward_network ffn);
     double **apply_deactivation(layer *_layer, feedforward_network ffn);
+    void update_weights(feedforward_network ffn);
+    void clear_network(feedforward_network ffn);
+    void clear_matrix_memory(double **matrix, int rows);
 
 #ifdef __cplusplus
 }

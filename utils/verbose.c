@@ -22,6 +22,15 @@ void print_matrix_double(double **matrix, int rows, int columns) {
     }
 }
 
+void print_vector(double *matrix, int columns) {
+    int j;
+
+    for (j = 0; j < columns; j++) {
+        printf(" %f, ", *(matrix + j));
+    }
+    printf("\n");
+}
+
 void print_matrix_int(int **matrix, int rows, int columns) {
     int i, j;
 
@@ -75,7 +84,6 @@ void print_network(feedforward_network network) {
     for (i = 0; i < n_layers + 2; i++) {
         layer *_layer = (layers + i);
 
-
         printf("\nlayer %d, name: %s\n", (i + 1), _layer->layer_name);
         if (_layer == NULL) {
             printf("layer is null");
@@ -87,13 +95,8 @@ void print_network(feedforward_network network) {
 }
 
 void print_forward_updates(feedforward_network ffn, layer *_layer) {
-    int i, j;
-
     if (_layer->previous_layer != NULL && _layer->outputs != NULL) {
-        printf("number of input dimensions/columns %d \n", ffn.input_dims[1]);
-        printf("output dimensions: %d x %d x %d \n\n\n", ffn.num_records, _layer->num_outputs, ffn.input_dims[1]);
-
-        printf("layer index %d \n", _layer->layer_index);
+        printf("\nlayer index %d \n", _layer->layer_index);
         printf("number of inputs x outputs: %d x %d \n", _layer->num_inputs, _layer->num_outputs);
         printf("outputs : \n");
         print_matrix_double(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);

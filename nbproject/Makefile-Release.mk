@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/network_types/feedforward_network.o \
 	${OBJECTDIR}/utils/array.o \
+	${OBJECTDIR}/utils/clear_memory.o \
 	${OBJECTDIR}/utils/math.o \
 	${OBJECTDIR}/utils/verbose.o \
 	${OBJECTDIR}/utils/weight_initializer.o
@@ -81,6 +82,11 @@ ${OBJECTDIR}/utils/array.o: utils/array.c
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/array.o utils/array.c
+
+${OBJECTDIR}/utils/clear_memory.o: utils/clear_memory.c
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/clear_memory.o utils/clear_memory.c
 
 ${OBJECTDIR}/utils/math.o: utils/math.c
 	${MKDIR} -p ${OBJECTDIR}/utils

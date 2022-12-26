@@ -25,6 +25,7 @@ extern "C" {
     void print_matrix_int(int **matrix, int rows, int columns);
     void print_matrix_double(double **matrix, int rows, int columns);
     void print_forward_updates(feedforward_network ffn, layer *_layer);
+    void print_vector(double *matrix, int columns);
 
 #ifdef __cplusplus
 }

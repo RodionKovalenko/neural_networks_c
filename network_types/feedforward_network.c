@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "../layer.h"
 #include "../feedforward_network.h"
 #include "../weight_initializer.h"
@@ -42,7 +43,7 @@ feedforward_network init_ffn(
         .minibatch_size = 15,
         .input_dims = input_dims,
         .layers = layers,
-        .activation_type = activation
+        .activation_type = activation,
     };
 
     if (verbose == 1) {
@@ -88,6 +89,7 @@ struct layer* init_layers(
         hidden_layer->num_input_columns = n_h_neurons;
 
         double **weight_matrix = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+
         init_random_weights(weight_matrix, hidden_layer->num_outputs, hidden_layer->num_inputs);
         char *layer_name = "hidden layer";
 
@@ -97,6 +99,8 @@ struct layer* init_layers(
 
         hidden_layer->outputs = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->gradients_W = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+
         hidden_layer->previous_layer = &layers[i - 1];
         hidden_layer->next_layer = &layers[i + 1];
         layers[i] = *hidden_layer;
@@ -120,6 +124,8 @@ struct layer* init_layers(
     output_layer->previous_layer = &layers[i - 1];
     output_layer->outputs = build_array(output_layer->num_outputs, input_dims[1]);
     output_layer->gradients = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->errors = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->gradients_W = build_array(output_layer->num_outputs, input_dims[1]);
 
     layers[i] = *output_layer;
     layers[i - 1].next_layer = output_layer;
@@ -157,9 +163,7 @@ void forward(feedforward_network ffn, double *data_X) {
 
             apply_activation(_layer, ffn);
 
-            if (_prev_layer != NULL && outputs != NULL && verbose == 1) {
-                print_forward_updates(ffn, _layer);
-            } else if (l == ffn.n_h_layers + 1) {
+            if (_prev_layer != NULL && outputs != NULL && verbose == 1 || (l == ffn.n_h_layers + 1)) {
                 print_forward_updates(ffn, _layer);
             }
         }
@@ -237,8 +241,7 @@ double apply_deactivation_to_value(double value, feedforward_network ffn) {
 
 void backward(feedforward_network ffn, double *data_X, double *target_Y) {
     int i, j, r, l, k;
-    double **layer_input, **outputs;
-    double value_der, error;
+    double value_der;
     layer *_layer, *_prev_layer, *_next_layer;
 
     // calculate gradients
@@ -251,14 +254,23 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
             for (i = 0; i < ffn.input_dims[1]; i++) {
                 value_der = apply_deactivation_to_value(_layer->outputs[j][i], ffn);
                 if (l == (ffn.n_h_layers + 1)) {
-                    error = target_Y[i] - _layer->outputs[j][i];
-                    _layer->gradients[j][i] += error * value_der;
+                    _layer->errors[j][i] = pow((target_Y[j] - _layer->outputs[j][i]), 2.0);
+                    _layer->gradients[j][i] += (target_Y[j] - _layer->outputs[j][i]) * value_der;
                 } else {
                     for (k = 0; k < _next_layer->num_outputs; k++) {
-                        //_layer->gradients[j][i] += _next_layer->gradients[k][i] * _next_layer->weights[k][j];
-                        _layer->gradients[j][i] += _next_layer->gradients[k][i];
+                        _layer->gradients[j][i] += _next_layer->gradients[k][i] * _next_layer->weights[k][j];
+                        //_layer->gradients[j][i] += _next_layer->gradients[k][i];
                     }
                     _layer->gradients[j][i] *= value_der;
+                }
+
+
+                for (k = 0; k < _layer->num_inputs; k++) {
+                    if (l == 1) {
+                        _layer->gradients_W[j][k] += _layer->gradients[j][i] * data_X[k];
+                    } else {
+                        _layer->gradients_W[j][k] += _layer->gradients[j][i] * _prev_layer->outputs[k][i];
+                    }
                 }
             }
         }
@@ -269,53 +281,100 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
             print_matrix_double(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
         }
     }
+}
 
-    // update weights
+void update_weights(feedforward_network ffn) {
+    int i, j, r, l, k;
+    layer *_layer;
+
     for (l = ffn.n_h_layers + 1; l >= 1; l--) {
         _layer = &ffn.layers[l];
-        _next_layer = _layer->next_layer;
-        _prev_layer = _layer->previous_layer;
-        layer_input = _prev_layer->outputs;
 
         for (j = 0; j < _layer->num_outputs; j++) {
             for (i = 0; i < _layer->num_inputs; i++) {
                 for (k = 0; k < ffn.input_dims[1]; k++) {
                     if (_layer->layer_index == 2) {
-                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients[j][k] * data_X[k];
+                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients_W[j][k];
                     } else {
-                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients[j][k] * layer_input[i][k];
+                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients_W[j][k];
                     }
                 }
             }
         }
 
+        printf("weights are updated\n");
+
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
+        clear_array(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+
+        if (_layer->errors != NULL) {
+            clear_array(_layer->errors, ffn.n_out_neurons, ffn.input_dims[1]);
+        }
     }
 }
 
 feedforward_network fit(feedforward_network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode) {
-    int i, j;
+    int i, j, r;
     int record_index;
     int minibach_index;
 
+    minibach_index = 0;
     for (i = 0; i < num_iterations; i++) {
-        minibach_index = 0;
-
         for (record_index = 0; record_index < ffn.num_records; record_index++) {
+            //            printf("input data \n");
+            //            print_vector(data_X[record_index], ffn.input_dims[2]);
+            printf("target output \n");
+            print_vector(target_Y[record_index], ffn.n_out_neurons);
+
             if (minibach_index < ffn.minibatch_size) {
                 forward(ffn, data_X[record_index]);
                 backward(ffn, data_X[record_index], target_Y[record_index]);
                 minibach_index++;
+
+                printf("errors\n");
+                print_matrix_double(ffn.layers[ffn.n_h_layers + 1].errors, ffn.n_out_neurons, ffn.input_dims[1]);
+               
             } else {
                 minibach_index = 0;
             }
-            if (verbose == 1) {
-                printf("======================================================= record index %d \n", record_index);
-            }
+
+
+            printf("======================================================= record index %d \n", record_index);
+        }
+         update_weights(ffn);
+
+
+        printf("======================================================= iteration index %d \n", record_index);
+    }
+}
+
+void clear_network(feedforward_network ffn) {
+    int l = 0;
+    layer *_layer;
+
+    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
+        _layer = &ffn.layers[l];
+        if (ffn.layers[l].errors != NULL) {
+            clear_matrix_memory(ffn.layers[l].errors, ffn.n_out_neurons);
         }
 
-        if (verbose == 1) {
-            printf("======================================================= iteration index %d \n", record_index);
-        }
+        free(_layer->activation_type);
+        free(_layer->next_layer);
+
+        clear_matrix_memory(_layer->gradients, _layer->num_outputs);
+        clear_matrix_memory(_layer->weights, _layer->num_outputs);
+        clear_matrix_memory(_layer->outputs, _layer->num_outputs);
     }
+
+    free(ffn.layers);
+}
+
+void clear_matrix_memory(double **matrix, int rows) {
+    int i;
+
+    for (i = 0; i < rows; i++) {
+        free(matrix[i]);
+    }
+
+    free(matrix);
 }
