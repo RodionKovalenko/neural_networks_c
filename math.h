@@ -16,12 +16,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+    void set_verbose(int verbose);
     double** matrix_product(double **matrix1, double **matrix2, int row, int col, int col_k);
     double get_random_value();
     double** init_weight_matrix(int weight_r, int weight_c);
     double sigmoid_value(double value);
     double** sigmoid_to_matrix(double **matrix, int row, int col);
+    double sigmoid_derivate_to_value(double value);
     double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_sum(double **matrix_1, double **matrix_2, int row, int col);
     double** sigmoid_derivative(double **matrix, int row, int col);

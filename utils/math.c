@@ -70,6 +70,10 @@ double** sigmoid_to_matrix(double **matrix, int row, int col) {
     return matrix;
 }
 
+double sigmoid_derivate_to_value(double value) {
+    return (value * (1.0 - value));
+}
+
 double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col) {
     int i, j;
 

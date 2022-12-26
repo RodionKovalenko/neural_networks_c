@@ -7,10 +7,10 @@
 
 double** build_array(int n_row, int n_col) {
     int i, j;
-    double **result_matrix = (double**) malloc(n_row * sizeof (double));
+    double **result_matrix = (double**) malloc(n_row * sizeof(double));
 
     for (i = 0; i < n_row; i++) {
-        result_matrix[i] = (double*) malloc(n_col * sizeof (double));
+        result_matrix[i] = (double*) malloc(n_col * sizeof(double));
     }
 
     return result_matrix;
@@ -31,10 +31,10 @@ double*** build_array_3d(int n_records, int n_row, int n_col) {
 }
 
 double** clear_array(double **array, int n_row, int n_col) {
-     int i, j;
+    int i, j;
 
     for (i = 0; i < n_row; i++) {
-        for (j = 0; j < n_col;  j++) {
+        for (j = 0; j < n_col; j++) {
             array[i][j] = 0.0;
         }
     }

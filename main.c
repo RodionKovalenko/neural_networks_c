@@ -67,31 +67,31 @@ int main(int argc, char** argv) {
     int n_out_neurons = 3;
 
     int num_dim[] = {input_num_records, input_r, input_c};
-    int num_dim_params = 2;
+    int num_dim_params = sizeof(num_dim) / sizeof(int);
 
-    double learning_rate = 0.01;
-    int num_iterations = 2;
+    double learning_rate = 0.8;
+    int num_iterations = 60;
     int training_mode = 0;
 
-    double **input_matrix = get_input_matrix(input_num_records, input_c);
-    double **target_matrix = get_input_matrix(n_out_neurons, input_c);
+    // one-dimensional training and target dataset 
+    double **data_X = get_input_matrix(input_num_records, input_c);
+    double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
 
-    set_verbose(1);
-
+    set_verbose(0);
+    
     feedforward_network feedforward_net = init_ffn(
-            input_matrix,
             num_dim,
             num_dim_params,
             input_num_records,
             n_h_layers,
             n_h_neurons,
             n_out_neurons,
-            target_matrix,
-            learning_rate
+            learning_rate,
+            SIGMOID
             );
 
-    fit(feedforward_net, num_iterations, training_mode);
-
+    fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
+    
     return (EXIT_SUCCESS);
 }
 

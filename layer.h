@@ -16,8 +16,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+    void set_verbose(int verbose);
 
- typedef struct layer {
+    typedef struct layer {
         double **weights;
         double **inputs;
         // layer output in 2_d: [record_index][input_dimension]

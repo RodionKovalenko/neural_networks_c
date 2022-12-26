@@ -12,6 +12,7 @@
 #include "../verbose.h"
 #include "../array.h"
 #include "../math.h"
+#include "../activation.h"
 
 static int verbose = 0;
 
@@ -20,31 +21,28 @@ void set_verbose(int value) {
 }
 
 feedforward_network init_ffn(
-        double **inputs,
         int *input_dims,
-        int input_num_records,
         int num_input_params,
+        int input_num_records,
         int n_h_layers,
         int n_h_neurons,
         int n_out_neurons,
-        double **targets,
-        double learning_rate
+        double learning_rate,
+        int activation
         ) {
 
-    layer *layers = init_layers(inputs, input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons);
+    layer *layers = init_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons);
 
     feedforward_network ffn = {
         .num_records = input_num_records,
-        .dataset = inputs,
         .learning_rate = learning_rate,
         .n_h_layers = n_h_layers,
         .n_h_neurons = n_h_neurons,
-        .n_input_rows = layers[0].num_input_rows,
-        .n_input_columns = layers[0].num_input_rows,
         .n_out_neurons = n_out_neurons,
+        .minibatch_size = 15,
         .input_dims = input_dims,
-        .targets = targets,
-        .layers = layers
+        .layers = layers,
+        .activation_type = activation
     };
 
     if (verbose == 1) {
@@ -55,7 +53,6 @@ feedforward_network init_ffn(
 }
 
 struct layer* init_layers(
-        double **inputs,
         int *input_dims,
         int num_input_params,
         int n_h_layers,
@@ -65,27 +62,21 @@ struct layer* init_layers(
     int i;
 
     layer *layers = (layer *) malloc(sizeof (struct layer) * (n_h_layers + 2));
-
     layer *input_layer = (layer *) malloc(sizeof (struct layer));
 
     input_layer->layer_name = "input layer";
     layers[0] = *input_layer;
-    layers[0].inputs = inputs;
-    layers[0].outputs = inputs;
 
     // input layer 0
     for (i = 0; i < num_input_params; i++) {
-        if (i == 1) {
+        if (i == 2) {
             layers[0].num_inputs = input_dims[i];
             layers[0].num_input_rows = input_dims[i];
-        }
-        if (i == 2) {
             layers[0].num_outputs = input_dims[i];
             layers[0].num_input_columns = input_dims[i];
         }
     }
     layers[0].layer_index = 1;
-
 
     // hidden layers
     for (i = 1; i < n_h_layers + 1; i++) {
@@ -97,7 +88,6 @@ struct layer* init_layers(
         hidden_layer->num_input_columns = n_h_neurons;
 
         double **weight_matrix = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
-
         init_random_weights(weight_matrix, hidden_layer->num_outputs, hidden_layer->num_inputs);
         char *layer_name = "hidden layer";
 
@@ -106,6 +96,7 @@ struct layer* init_layers(
         hidden_layer->weights = weight_matrix;
 
         hidden_layer->outputs = build_array(hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->previous_layer = &layers[i - 1];
         hidden_layer->next_layer = &layers[i + 1];
         layers[i] = *hidden_layer;
@@ -128,6 +119,7 @@ struct layer* init_layers(
     output_layer->layer_index = (i + 1);
     output_layer->previous_layer = &layers[i - 1];
     output_layer->outputs = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->gradients = build_array(output_layer->num_outputs, input_dims[1]);
 
     layers[i] = *output_layer;
     layers[i - 1].next_layer = output_layer;
@@ -135,57 +127,195 @@ struct layer* init_layers(
     return layers;
 }
 
-void forward(feedforward_network ffn, int record_index) {
+void forward(feedforward_network ffn, double *data_X) {
     int i, j, r, l, k;
+    double **layer_input, **outputs;
+    layer *_layer, *_prev_layer;
 
     for (l = 1; l < ffn.n_h_layers + 2; l++) {
-        layer *_layer = &ffn.layers[l];
-        layer *_prev_layer = _layer->previous_layer;
+        _layer = &ffn.layers[l];
+        _prev_layer = _layer->previous_layer;
 
         if (_prev_layer != NULL) {
-            double **layer_input = _prev_layer->outputs;
-            double **outputs = _layer->outputs;
+            layer_input = _prev_layer->outputs;
+            outputs = _layer->outputs;
 
             clear_array(outputs, _layer->num_outputs, ffn.input_dims[1]);
 
+            // forward output to the next layer
             for (j = 0; j < _layer->num_outputs; j++) {
                 for (i = 0; i < _layer->num_inputs; i++) {
-                    for (k = 0; k < ffn.input_dims[1]; k++) {
-                        if (layer_input != NULL) {
-                            if (_prev_layer->layer_index == 1) {
-                                outputs[j][k] += _layer->weights[j][i] * ffn.dataset[record_index][i];
-                            } else {
-                                outputs[j][k] += _layer->weights[j][i] * layer_input[i][k];
-                            }
+                    for (int k = 0; k < ffn.input_dims[1]; k++) {
+                        if (_prev_layer->layer_index == 1) {
+                            outputs[j][k] += _layer->weights[j][i] * data_X[i];
+                        } else {
+                            outputs[j][k] += _layer->weights[j][i] * layer_input[j][k];
                         }
                     }
                 }
             }
 
-            sigmoid_to_matrix(outputs, _layer->num_outputs, ffn.input_dims[1]);
-            _layer->outputs = outputs;
+            apply_activation(_layer, ffn);
 
             if (_prev_layer != NULL && outputs != NULL && verbose == 1) {
-                printf("number of input dimensions/columns %d \n", ffn.input_dims[2]);
-                for (i = 0; i < ffn.input_dims[2]; i++) {
-                    printf("record data are: column %d, value: %f \n", i, ffn.dataset[record_index][i]);
-                }
-
-                printf("output dimensions: %d x %d x %d \n\n\n", ffn.num_records, _layer->num_outputs, ffn.input_dims[1]);
-                printf("layer index %d \n", _layer->layer_index);
-                printf("record index %d \n", record_index);
-                print_matrix_double(outputs, _layer->num_outputs, ffn.input_dims[1]);
+                print_forward_updates(ffn, _layer);
+            } else if (l == ffn.n_h_layers + 1) {
+                print_forward_updates(ffn, _layer);
             }
         }
     }
 }
 
-feedforward_network fit(feedforward_network ffn, int num_iterations, int training_mode) {
-    int i, j, record_index;
+double **apply_activation(layer *_layer, feedforward_network ffn) {
+    switch (ffn.activation_type) {
+        case SIGMOID:
+            return sigmoid_to_matrix(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
+        case IDENTITY:
+            return _layer->outputs;
+        case SOFTMAX:
+            break;
+        case BINARY:
+            break;
+        case TANH:
+            break;
+        case RELU:
+            break;
+        case SWISH:
+            break;
+        case GELU:
+            break;
+        case SELU:
+            break;
+    }
+}
+
+double **apply_deactivation(layer *_layer, feedforward_network ffn) {
+    switch (ffn.activation_type) {
+        case SIGMOID:
+            return sigmoid_to_matrix(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
+        case IDENTITY:
+            return _layer->outputs;
+        case SOFTMAX:
+            break;
+        case BINARY:
+            break;
+        case TANH:
+            break;
+        case RELU:
+            break;
+        case SWISH:
+            break;
+        case GELU:
+            break;
+        case SELU:
+            break;
+    }
+}
+
+double apply_deactivation_to_value(double value, feedforward_network ffn) {
+    switch (ffn.activation_type) {
+        case SIGMOID:
+            return sigmoid_derivate_to_value(value);
+        case IDENTITY:
+            return value;
+        case SOFTMAX:
+            break;
+        case BINARY:
+            break;
+        case TANH:
+            break;
+        case RELU:
+            break;
+        case SWISH:
+            break;
+        case GELU:
+            break;
+        case SELU:
+            break;
+    }
+}
+
+void backward(feedforward_network ffn, double *data_X, double *target_Y) {
+    int i, j, r, l, k;
+    double **layer_input, **outputs;
+    double value_der, error;
+    layer *_layer, *_prev_layer, *_next_layer;
+
+    // calculate gradients
+    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
+        _layer = &ffn.layers[l];
+        _next_layer = _layer->next_layer;
+        _prev_layer = _layer->previous_layer;
+
+        for (j = 0; j < _layer->num_outputs; j++) {
+            for (i = 0; i < ffn.input_dims[1]; i++) {
+                value_der = apply_deactivation_to_value(_layer->outputs[j][i], ffn);
+                if (l == (ffn.n_h_layers + 1)) {
+                    error = target_Y[i] - _layer->outputs[j][i];
+                    _layer->gradients[j][i] += error * value_der;
+                } else {
+                    for (k = 0; k < _next_layer->num_outputs; k++) {
+                        //_layer->gradients[j][i] += _next_layer->gradients[k][i] * _next_layer->weights[k][j];
+                        _layer->gradients[j][i] += _next_layer->gradients[k][i];
+                    }
+                    _layer->gradients[j][i] *= value_der;
+                }
+            }
+        }
+
+        if (verbose == 1) {
+            printf("backwards \n");
+            printf("layer %s, index %d\n", _layer->layer_name, _layer->layer_index);
+            print_matrix_double(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
+        }
+    }
+
+    // update weights
+    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
+        _layer = &ffn.layers[l];
+        _next_layer = _layer->next_layer;
+        _prev_layer = _layer->previous_layer;
+        layer_input = _prev_layer->outputs;
+
+        for (j = 0; j < _layer->num_outputs; j++) {
+            for (i = 0; i < _layer->num_inputs; i++) {
+                for (k = 0; k < ffn.input_dims[1]; k++) {
+                    if (_layer->layer_index == 2) {
+                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients[j][k] * data_X[k];
+                    } else {
+                        _layer->weights[j][i] += ffn.learning_rate * _layer->gradients[j][k] * layer_input[i][k];
+                    }
+                }
+            }
+        }
+
+        clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
+    }
+}
+
+feedforward_network fit(feedforward_network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode) {
+    int i, j;
+    int record_index;
+    int minibach_index;
 
     for (i = 0; i < num_iterations; i++) {
+        minibach_index = 0;
+
         for (record_index = 0; record_index < ffn.num_records; record_index++) {
-            forward(ffn, record_index);
+            if (minibach_index < ffn.minibatch_size) {
+                forward(ffn, data_X[record_index]);
+                backward(ffn, data_X[record_index], target_Y[record_index]);
+                minibach_index++;
+            } else {
+                minibach_index = 0;
+            }
+            if (verbose == 1) {
+                printf("======================================================= record index %d \n", record_index);
+            }
+        }
+
+        if (verbose == 1) {
+            printf("======================================================= iteration index %d \n", record_index);
         }
     }
 }
