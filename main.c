@@ -30,7 +30,6 @@ double** get_input_matrix(int input_r, int input_c) {
         input_matrix[i] = (double*) malloc(input_c * sizeof (double));
     }
 
-
     input_matrix[0][0] = 0.0;
     input_matrix[0][1] = 0.0;
 
@@ -55,11 +54,8 @@ double** get_target_matrix(int input_r, int input_c) {
     }
 
     input_matrix[0][0] = 0.0;
-
     input_matrix[1][0] = 1.0;
-
     input_matrix[2][0] = 0.0;
-
     input_matrix[3][0] = 1.0;
 
     return input_matrix;
@@ -87,7 +83,7 @@ void testnetwork() {
     double **data_X = get_input_matrix(input_num_records, input_c);
     double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
 
-    set_verbose(1);
+    set_verbose(0);
     printf("start");
 
     feedforward_network feedforward_net = init_ffn(

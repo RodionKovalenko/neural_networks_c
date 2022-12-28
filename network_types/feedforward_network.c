@@ -325,12 +325,12 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
             backward(ffn, data_X[record_index], target_Y[record_index]);
 
             if (verbose == 1) {
-//                printf("======================================================= record index %d \n", record_index);
-//                printf("======================================================= iteration index %d \n", i);
-//                printf("target output \n");
-//                print_vector(target_Y[record_index], ffn.n_out_neurons);
-//                printf("network output \n");
-//                print_matrix_double(ffn.layers[ffn.n_h_layers + 1].outputs, ffn.n_out_neurons, ffn.input_dims[1]);
+                printf("======================================================= record index %d \n", record_index);
+                printf("======================================================= iteration index %d \n", i);
+                printf("target output \n");
+                print_vector(target_Y[record_index], ffn.n_out_neurons);
+                printf("network output \n");
+                print_matrix_double(ffn.layers[ffn.n_h_layers + 1].outputs, ffn.n_out_neurons, ffn.input_dims[1]);
             }
 
             if (ffn.num_records > ffn.minibatch_size) {
@@ -349,7 +349,7 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
 
         // if number of records are smaller than batchsize than update weights after records iterations
         if (ffn.num_records < ffn.minibatch_size) {
-            printf("*********************************errors ***********************\n\n");
+            printf("*********************************errors ***********************\n");
             print_matrix_double(ffn.layers[ffn.n_h_layers + 1].errors, ffn.n_out_neurons, ffn.input_dims[1]);
             printf("*********************************errors ***********************\n\n");
 
