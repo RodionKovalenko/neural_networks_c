@@ -240,6 +240,8 @@ double apply_deactivation_to_value(double value, feedforward_network ffn) {
     }
 }
 
+// https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+
 void backward(feedforward_network ffn, double *data_X, double *target_Y) {
     int i, j, r, l, k;
     double value_der;
@@ -260,7 +262,6 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
                 } else {
                     for (k = 0; k < _next_layer->num_outputs; k++) {
                         _layer->gradients[j][i] += _next_layer->gradients[k][i] * _next_layer->weights[k][j];
-                        //_layer->gradients[j][i] += _next_layer->gradients[k][i];
                     }
                     _layer->gradients[j][i] *= value_der;
                 }
@@ -285,18 +286,21 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
 
 void update_weights(feedforward_network ffn) {
     int i, j, r, l, k;
+    int normalizing_constant = ffn.minibatch_size;
     layer *_layer;
+
+    if (ffn.num_records < ffn.minibatch_size) {
+        normalizing_constant = ffn.num_records;
+    }
 
     for (l = ffn.n_h_layers + 1; l >= 1; l--) {
         _layer = &ffn.layers[l];
 
         for (j = 0; j < _layer->num_outputs; j++) {
             for (i = 0; i < _layer->num_inputs; i++) {
-                _layer->weights[j][i] += (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) ffn.num_records;
+                _layer->weights[j][i] += (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
             }
         }
-
-        //print_layer(_layer);
 
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
         clear_array(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);

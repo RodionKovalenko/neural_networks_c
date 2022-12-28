@@ -75,7 +75,7 @@ void testnetwork() {
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.9;
+    double learning_rate = 0.8;
     int num_iterations = 600;
     int training_mode = 0;
 
