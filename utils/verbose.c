@@ -43,7 +43,7 @@ void print_matrix_int(int **matrix, int rows, int columns) {
 }
 
 void print_layer(layer *_layer) {
-    printf("layer index : %d \n", _layer->layer_index);
+    printf("layer index : %d, name: %s \n", _layer->layer_index, _layer->layer_name);
     printf("number of layer inputs and outputs: (%d => %d) \n", _layer->num_inputs, _layer->num_outputs);
     printf("number of layer rows and columns: (%d => %d) \n", _layer->num_input_rows, _layer->num_input_columns);
 
@@ -52,6 +52,22 @@ void print_layer(layer *_layer) {
         printf("weight matrix size: number of outputs(%d, number of inputs %d) \n", _layer->num_outputs, _layer->num_inputs);
 
         print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
+    }
+
+    if (_layer->gradients != NULL) {
+        printf("gradients \n");
+
+        print_matrix(_layer->gradients, _layer->num_outputs, 1);
+    }
+    if (_layer->gradients_W != NULL) {
+        printf("gradients of weights\n");
+
+        print_matrix(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+    }
+
+    if (_layer->outputs != NULL) {
+        printf("layer output \n");
+        print_matrix(_layer->outputs, _layer->num_outputs, 1);
     }
 
     if (_layer->previous_layer != NULL) {
@@ -71,7 +87,7 @@ void print_layer(layer *_layer) {
         }
     }
 
-
+    printf("\n");
 }
 
 void print_network(feedforward_network network) {
@@ -92,14 +108,4 @@ void print_network(feedforward_network network) {
         print_layer(_layer);
     }
 
-}
-
-void print_forward_updates(feedforward_network ffn, layer *_layer) {
-    if (_layer->previous_layer != NULL && _layer->outputs != NULL) {
-        printf("\nlayer index %d \n", _layer->layer_index);
-        printf("number of inputs x outputs: %d x %d \n", _layer->num_inputs, _layer->num_outputs);
-        printf("outputs : \n");
-        print_matrix_double(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
-        printf("-------------------------------------------------------------\n");
-    }
 }
