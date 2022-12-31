@@ -18,11 +18,11 @@ extern "C" {
 #endif
 
     enum activation {
-        BINARY,
         SIGMOID,
         IDENTITY,
         TANH,
         RELU,
+        LEAKY_RELU,
         SOFTMAX,
         SWISH,
         GELU,

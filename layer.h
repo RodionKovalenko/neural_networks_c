@@ -23,16 +23,18 @@ extern "C" {
         // layer output in 2_d: [record_index][input_dimension]
         double **outputs;
         double **errors;
+        double **bias;
         double **gradients;
+        double **gradients_B;
         double **gradients_W;
         double **prev_gradients;
         struct layer *previous_layer;
         struct layer *next_layer;
+        int activation_type;
         int num_inputs;
         int num_outputs;
         int num_input_rows;
         int num_input_columns;
-        char *activation_type;
         char *layer_name;
         // beginning with 1
         int layer_index;

@@ -21,6 +21,7 @@
 #include "verbose.h"
 #include "layer.h"
 #include "feedforward_network.h"
+#include "array.h"
 
 double** get_input_matrix(int input_r, int input_c) {
     double **input_matrix = (double**) malloc(input_r * (sizeof (double)));
@@ -69,21 +70,21 @@ void testnetwork() {
     int input_c = 2;
 
     int n_h_layers = 2;
-    int n_h_neurons = 50;
+    int n_h_neurons = 20;
     int n_out_neurons = 1;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.8;
-    int num_iterations = 600;
+    double learning_rate = 0.003;
+    int num_iterations = 5500;
     int training_mode = 0;
 
     // one-dimensional training and target dataset 
     double **data_X = get_input_matrix(input_num_records, input_c);
     double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
 
-    set_verbose(0);
+    set_verbose(1);
     printf("start");
 
     feedforward_network feedforward_net = init_ffn(
@@ -94,11 +95,13 @@ void testnetwork() {
             n_h_neurons,
             n_out_neurons,
             learning_rate,
-            SIGMOID
+            LEAKY_RELU
             );
 
     fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
     clear_network(feedforward_net);
+    clear_matrix_memory(data_X, input_num_records);
+    clear_matrix_memory(target_Y, input_num_records);
 }
 
 int main(int argc, char** argv) {

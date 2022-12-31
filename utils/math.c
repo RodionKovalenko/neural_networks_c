@@ -74,6 +74,56 @@ double sigmoid_derivate_to_value(double value) {
     return (value * (1.0 - value));
 }
 
+//https://towardsdatascience.com/derivative-of-the-softmax-function-and-the-categorical-cross-entropy-loss-ffceefc081d1
+
+double softmax_derivate_to_value(double **matrix, int row_i, int col_j) {
+    if (row_i == col_j) {
+        return matrix[row_i][col_j] * (1.0 - matrix[row_i][col_j]);
+    }
+
+    return matrix[row_i][col_j] * (matrix[row_i - 1][col_j]);
+}
+
+double **softmax_derivate_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+
+    double **derivative_matrix = (double**) malloc(row * sizeof (double));
+
+    for (i = 0; i < row; i++)
+        derivative_matrix[i] = (double*) malloc(col * sizeof (double));
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix[i][j] = softmax_derivate_to_value(matrix, i, j);
+        }
+    }
+
+    return derivative_matrix;
+}
+
+double **softmax_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+
+    double normalizing_constant = 0.0;
+    double exp_value = 0.0;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            exp_value = exp(matrix[i][j]);
+            normalizing_constant += exp_value;
+            matrix[i][j] = exp_value;
+        }
+    }
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix[i][j] /= normalizing_constant;
+        }
+    }
+
+    return matrix;
+}
+
 double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col) {
     int i, j;
 
@@ -123,6 +173,61 @@ double** sigmoid_derivative(double **matrix, int row, int col) {
     }
 
     return derivative_matrix;
+}
+
+double** tanh_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+    double value_1, value_2;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            value_1 = exp(matrix[i][j]);
+            value_2 = exp(-matrix[i][j]);
+            matrix[i][j] = (value_1 - value_2) / (value_1 + value_2);
+        }
+    }
+
+    return matrix;
+}
+
+double** relu_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            if (matrix[i][j] < 0) {
+                matrix[i][j] = 0;
+            }
+        }
+    }
+
+    return matrix;
+}
+
+double relu_derivative_to_value(double value) {
+    return value > 0 ? 1.0 : 0;
+}
+
+double** leaky_relu_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            if (matrix[i][j] < 0) {
+                matrix[i][j] *= 0.01;
+            }
+        }
+    }
+
+    return matrix;
+}
+
+double leaky_relu_derivative_to_value(double value) {
+    return value > 0 ? 1.0 : 0.01;
+}
+
+double tanh_derivative_to_value(double value) {
+    return 1.0 - pow(value, 2.0);
 }
 
 double** matrix_transpose(double **matrix, int row, int col) {
@@ -178,8 +283,8 @@ double get_mean(double **matrix, int row, int col) {
             mean += matrix[i][j];
         }
     }
-    
-    mean /= (row *col);
+
+    mean /= (row * col);
 
     return mean;
 }
@@ -194,14 +299,14 @@ double get_variance(double **matrix, int row, int col) {
             var += pow((matrix[i][j] - mean), 2.0);
         }
     }
-    
-    var /= (row *col);
+
+    var /= (row * col);
 
     return var;
 }
 
 double get_standard_deviation(double **matrix, int row, int col) {
     double var = get_variance(matrix, row, col);
-    
+
     return sqrt(var);
 }

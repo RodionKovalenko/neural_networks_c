@@ -29,6 +29,16 @@ extern "C" {
     double** matrix_transpose(double **matrix, int row, int col);
     double** hadamard_product(double ** matrix_1, double **matrix_2, int row, int col);
     double** multiply_scalar(double **matrix, double scalar, int row, int col);
+    double **softmax_to_matrix(double **matrix, int row, int col);
+    double **softmax_derivate_to_matrix(double **matrix, int row, int col);
+    double softmax_derivate_to_value(double **matrix, int row_i, int col_j);
+    double** tanh_to_matrix(double **matrix, int row, int col);
+    double tanh_derivative_to_value(double value);
+    double** relu_to_matrix(double **matrix, int row, int col);
+    double relu_derivative_to_value(double value);
+    double** leaky_relu_to_matrix(double **matrix, int row, int col);
+    double leaky_relu_derivative_to_value(double value);
+
 
 #ifdef __cplusplus
 }

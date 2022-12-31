@@ -16,7 +16,6 @@ double ** init_random_weights(double **weight_matrix, int n_output, int n_input)
     for (i = 0; i < n_output; i++) {
         for (j = 0; j < n_input; j++) {
            weight_matrix[i][j] = (double) rand() * (max - min) / (double) RAND_MAX + min;
-            //weight_matrix[i][j] = 0.1;
         }
     }
     
