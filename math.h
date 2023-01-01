@@ -38,6 +38,9 @@ extern "C" {
     double relu_derivative_to_value(double value);
     double** leaky_relu_to_matrix(double **matrix, int row, int col);
     double leaky_relu_derivative_to_value(double value);
+    double** multiply_two_to_matrix(double **matrix, int row, int col);
+    double multiply_two_derivative_to_value(double value);
+
 
 
 #ifdef __cplusplus

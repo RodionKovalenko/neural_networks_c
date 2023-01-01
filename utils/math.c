@@ -230,6 +230,22 @@ double tanh_derivative_to_value(double value) {
     return 1.0 - pow(value, 2.0);
 }
 
+double** multiply_two_to_matrix(double **matrix, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix[i][j] *= 2.0;
+        }
+    }
+
+    return matrix;
+}
+
+double multiply_two_derivative_to_value(double value) {
+    return 2.0;
+}
+
 double** matrix_transpose(double **matrix, int row, int col) {
     double **matrix_tranposed = (double**) malloc(col * sizeof (double));
     int i, j;

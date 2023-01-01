@@ -176,6 +176,7 @@ void forward(feedforward_network ffn, double *data_X) {
             }
 
             _layer->outputs = outputs;
+
             apply_activation(_layer, ffn);
         }
     }
@@ -201,6 +202,8 @@ double **apply_activation(layer *_layer, feedforward_network ffn) {
             return relu_to_matrix(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
         case LEAKY_RELU:
             return leaky_relu_to_matrix(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
+        case MULTIPLY_TWO:
+            return multiply_two_to_matrix(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
         case SWISH:
             break;
         case GELU:
@@ -232,6 +235,8 @@ double apply_deactivation_to_value(layer *_layer, int row, int column, feedforwa
             return relu_derivative_to_value(value);
         case LEAKY_RELU:
             return leaky_relu_derivative_to_value(value);
+        case MULTIPLY_TWO:
+            return multiply_two_derivative_to_value(value);
         case SWISH:
             break;
         case GELU:
@@ -247,6 +252,11 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
     int i, j, r, l, k;
     double value_der;
     layer *_layer, *_prev_layer, *_next_layer;
+    int normalizing_constant = ffn.minibatch_size;
+
+    if (ffn.num_records < ffn.minibatch_size) {
+        normalizing_constant = ffn.num_records;
+    }
 
     // calculate gradients
     for (l = ffn.n_h_layers + 1; l > 0; l--) {
@@ -258,7 +268,7 @@ void backward(feedforward_network ffn, double *data_X, double *target_Y) {
             for (i = 0; i < ffn.input_dims[1]; i++) {
                 value_der = apply_deactivation_to_value(_layer, j, i, ffn);
                 if (l == (ffn.n_h_layers + 1)) {
-                    ffn.errors[j][i] += pow((target_Y[j] - _layer->outputs[j][i]), 2.0) / (double) ffn.num_records;
+                    ffn.errors[j][i] += pow((target_Y[j] - _layer->outputs[j][i]), 2.0) / (double) normalizing_constant;
                     _layer->gradients[j][i] += -2.0 * (target_Y[j] - _layer->outputs[j][i]) * value_der;
                 } else {
                     for (k = 0; k < _next_layer->num_outputs; k++) {
@@ -295,9 +305,9 @@ void update_weights(feedforward_network ffn) {
 
         for (j = 0; j < _layer->num_outputs; j++) {
             for (i = 0; i < _layer->num_inputs; i++) {
-                _layer->weights[j][i] -= (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
+                // _layer->weights[j][i] -= (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
             }
-            _layer->bias[j][0] -= (ffn.learning_rate * _layer->gradients_B[j][0]) / (double) normalizing_constant;
+            // _layer->bias[j][0] -= (ffn.learning_rate * _layer->gradients_B[j][0]) / (double) normalizing_constant;
         }
 
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
@@ -329,12 +339,13 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
             forward(ffn, data_X[record_index]);
             backward(ffn, data_X[record_index], target_Y[record_index]);
 
-            if (i == 5) {
+            print_network(ffn);
+            if (i == 0) {
                 // check the correctness of gradient on the first iteration
                 check_gradient(ffn, data_X[record_index], target_Y[record_index]);
             }
 
-            if (verbose == 1) {
+            if (verbose == 0) {
                 printf("======================================================= iteration index %d \n", i);
                 printf("======================================================= record index %d \n", record_index);
                 printf("target output \n");
@@ -390,7 +401,7 @@ int check_early_stopping(feedforward_network ffn) {
 
     for (i = 0; i < ffn.n_out_neurons; i++) {
         for (j = 0; j < ffn.input_dims[1]; j++) {
-            if (ffn.errors[j][i] != 0 && ffn.errors[j][i] < 0.0001) {
+            if (ffn.errors[i][j] < 0.0001) {
                 can_be_stopped = 1;
             } else {
                 can_be_stopped = 0;
@@ -413,29 +424,42 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     forward(ffn, data_X);
     backward(ffn, data_X, target_Y);
 
-    double **outputs = ffn.layers[ffn.n_h_layers + 1].outputs;
+    int i, j;
     layer _first_h_layer = ffn.layers[1];
     layer _output_layer = ffn.layers[ffn.n_h_layers + 1];
-    double output_y1 = outputs[0][0];
+    double **original_outputs = build_array(ffn.n_out_neurons, ffn.input_dims[1]);
+
+    double **outputs = _output_layer.outputs;
+    double output_y1;
     double calculated_derivative_bias;
-    double delta_x = 0.0001;
+    double delta_x = 0.0000001;
+
+    double output_y2;
+    double calculated_derivative;
+    double derivative;
+
+    for (j = 0; j < ffn.n_out_neurons; j++) {
+        for (i = 0; i < ffn.input_dims[1]; i++) {
+            original_outputs[j][i] = outputs[j][i];
+        }
+    }
 
     printf("\n----------------------------------------- gradient check start--------------- \n\n\n");
-
+    output_y1 = original_outputs[0][0];
     // test 1: output layer
     _output_layer.weights[0][0] = _output_layer.weights[0][0] + delta_x;
     forward(ffn, data_X);
 
-    outputs = ffn.layers[ffn.n_h_layers + 1].outputs;
+    outputs = _output_layer.outputs;
 
-    double output_y2 = outputs[0][0];
-    double calculated_derivative = _output_layer.gradients_W[0][0];
-    double derivative = ((pow((target_Y[0] - output_y2), 2.0) - pow((target_Y[0] - output_y1), 2.0)) / delta_x);
+    output_y2 = outputs[0][0];
+    calculated_derivative = _output_layer.gradients_W[0][0];
+    derivative = ((pow((target_Y[0] - output_y2), 2.0) - pow((target_Y[0] - output_y1), 2.0)) / delta_x);
 
     printf("derivative of the first weight of output layer %f\n", derivative);
     printf("calculated derivative of first weight of output layer %f\n", calculated_derivative);
 
-    if (fabs(derivative) - fabs(calculated_derivative) < 0.0001) {
+    if (fabs(fabs(derivative) - fabs(calculated_derivative)) < 0.0001) {
         printf("\n\n\nderivative of the output layer is correct \n\n\n");
     } else {
         printf("GRADIENT IS NOT CORRECT\n");
@@ -443,22 +467,25 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     }
     _output_layer.weights[0][0] = _output_layer.weights[0][0] - delta_x;
 
-
     // test 2: first hidden layer
     _first_h_layer.weights[0][0] = _first_h_layer.weights[0][0] + delta_x;
-
     forward(ffn, data_X);
 
-    outputs = ffn.layers[ffn.n_h_layers + 1].outputs;
+    outputs = _output_layer.outputs;
+    derivative = 0.0;
 
-    output_y2 = outputs[0][0];
-    derivative = ((pow((target_Y[0] - output_y2), 2.0) - pow((target_Y[0] - output_y1), 2.0)) / delta_x);
+    for (j = 0; j < _output_layer.num_outputs; j++) {
+        for (i = 0; i < ffn.input_dims[1]; i++) {
+            output_y2 = outputs[j][i];
+            derivative += ((pow((target_Y[j] - output_y2), 2.0) - pow((target_Y[j] - original_outputs[j][i]), 2.0)) / delta_x);
+        }
+    }
+
     calculated_derivative = _first_h_layer.gradients_W[0][0];
-
     printf("derivative of the first weight of first hidden layer %f\n", derivative);
     printf("calculated derivative of first weight of hidden layer %f\n", calculated_derivative);
 
-    if (fabs(derivative) - fabs(calculated_derivative) < 0.0001) {
+    if (fabs(fabs(derivative) - fabs(calculated_derivative)) < 0.0001) {
         printf("\n\n\nderivative of the hidden layer is correct \n\n\n");
     } else {
         printf("GRADIENT IS NOT CORRECT\n");
@@ -466,7 +493,6 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     }
 
     _first_h_layer.weights[0][0] = _first_h_layer.weights[0][0] - delta_x;
-    forward(ffn, data_X);
 
     // test 3: gradient of bias in output layer
     _output_layer.bias[0][0] = _output_layer.bias[0][0] + delta_x;
@@ -481,10 +507,9 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     printf("bias calculated derivative of first weight of output layer %f\n", calculated_derivative_bias);
 
     _output_layer.bias[0][0] = _output_layer.bias[0][0] - delta_x;
-    forward(ffn, data_X);
 
-    if (fabs(derivative) - fabs(calculated_derivative_bias) < 0.0001) {
-        printf("\n\n\n bias derivative of the output layer is correct \n\n\n");
+    if (fabs(fabs(derivative) - fabs(calculated_derivative_bias)) < 0.0001) {
+        printf("\n\n\nbias derivative of the output layer is correct \n\n\n");
     } else {
         printf("BIAS GRADIENT IS NOT CORRECT\n");
         ffn.is_gradient_checked = 0;
@@ -495,13 +520,19 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     forward(ffn, data_X);
 
     outputs = _output_layer.outputs;
-    output_y2 = outputs[0][0];
-    derivative = ((pow((target_Y[0] - output_y2), 2.0) - pow((target_Y[0] - output_y1), 2.0)) / delta_x);
     calculated_derivative_bias = _first_h_layer.gradients_B[0][0];
+    derivative = 0.0;
+
+    for (j = 0; j < _output_layer.num_outputs; j++) {
+        for (i = 0; i < ffn.input_dims[1]; i++) {
+            output_y2 = outputs[j][i];
+            derivative += ((pow((target_Y[j] - output_y2), 2.0) - pow((target_Y[j] - original_outputs[j][i]), 2.0)) / delta_x);
+        }
+    }
 
     printf("bias derivative of the first weight of first hidden layer %f\n", derivative);
     printf("bias calculated derivative of first weight of hidden layer %f\n", calculated_derivative_bias);
-    if (fabs(derivative) - fabs(calculated_derivative_bias) < 0.0001) {
+    if (fabs(fabs(derivative) - fabs(calculated_derivative_bias)) < 0.0001) {
         printf("\n\n\n bias derivative of the first hidden layer is correct \n\n\n");
     } else {
         printf("BIAS GRADIENT IS NOT CORRECT\n");

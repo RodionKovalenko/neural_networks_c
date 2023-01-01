@@ -24,6 +24,7 @@ extern "C" {
         RELU,
         LEAKY_RELU,
         SOFTMAX,
+        MULTIPLY_TWO,
         SWISH,
         GELU,
         SELU
