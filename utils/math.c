@@ -21,12 +21,66 @@ double** matrix_product(double **matrix1, double **matrix2, int row, int col, in
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
             for (k = 0; k < col_k; k++) {
-                matrix3[i][j] += matrix1[i][k] * matrix2[k][j];
+                matrix3[i][k] += matrix1[i][j] * matrix2[j][k];
             }
         }
     }
     return matrix3;
 }
+
+double** apply_matrix_product(double **result, double **matrix1, double **matrix2, int row, int col, int col_k) {
+    int i, j, k;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            for (k = 0; k < col_k; k++) {
+                result[i][k] += matrix1[i][j] * matrix2[j][k];
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * add vector to matrix, vector must have the same length as the number of rows in the matrix
+ * @param matrix_1
+ * @param vec
+ * @param row
+ * @param col
+ * @return 
+ */
+double** matrix_add_vector(double **matrix_1, double *vec, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix_1[i][j] += vec[i];
+        }
+    }
+
+    return matrix_1;
+}
+
+/**
+ * add vector to matrix, vector must have the same length as the number of rows in the matrix
+ * @param matrix_1
+ * @param vec
+ * @param row
+ * @param col
+ * @return 
+ */
+double** matrix_add_bias(double **matrix_1, double **vec, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix_1[i][j] += vec[i][j];
+        }
+    }
+
+    return matrix_1;
+}
+
 
 double get_random_value() {
     double random_value;

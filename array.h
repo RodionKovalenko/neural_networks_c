@@ -20,6 +20,7 @@ extern "C" {
     double** build_array(int n_row, int n_col);
     double*** build_array_3d(int n_records, int n_row, int n_col);
     double** clear_array(double **array, int n_row, int n_col);
+    double** convert_vector_to_matrix(double *vector, int v_dim, int n_col);
 
 #ifdef __cplusplus
 }

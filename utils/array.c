@@ -41,3 +41,23 @@ double** clear_array(double **array, int n_row, int n_col) {
 
     return array;
 }
+
+/**
+ * converts vector to a matrix of (size of Vector, n_col)
+ * @param vector
+ * @param n_row
+ * @param n_col
+ * @return 
+ */
+double** convert_vector_to_matrix(double *vector, int v_dim, int n_col) {
+    double **result_matrix = build_array(v_dim, n_col);
+    int i, j;
+
+    for (i = 0; i < v_dim; i++) {
+        for (j = 0; j < n_col; j++) {
+            result_matrix[i][j] = vector[i];
+        }
+    }
+
+    return result_matrix;
+}

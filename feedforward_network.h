@@ -25,8 +25,8 @@ extern "C" {
         int activation_type;
         // number of input params, e.g 2 (rows and columns)
         int num_input_params;
-        int gradient_check : 1;
-        int is_gradient_checked : 1;
+        int gradient_check : 2;
+        int is_gradient_checked;
         // number of hidden layers
         int n_h_layers;
         // number of hidden neurons in a hidden layer
@@ -48,7 +48,8 @@ extern "C" {
             int n_h_neurons,
             int n_out_neurons,
             double learning_rate,
-            int activation
+            int activation,
+            double bottleneck_value
             );
 
     struct layer* init_layers(
@@ -57,7 +58,8 @@ extern "C" {
             int n_h_layers,
             int n_h_neurons,
             int n_,
-            int activation
+            int activation,
+            double bottleneck_value
             );
 
     feedforward_network fit(feedforward_network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode);
@@ -68,7 +70,7 @@ extern "C" {
     void update_weights(feedforward_network ffn);
     void clear_network(feedforward_network ffn);
     void clear_matrix_memory(double **matrix, int rows);
-    void check_gradient(feedforward_network ffn, double *data_X, double *target_Y);
+    void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y);
     int check_early_stopping(feedforward_network ffn);
 
 #ifdef __cplusplus

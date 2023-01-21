@@ -51,24 +51,24 @@ void print_layer(layer *_layer) {
     if (_layer->weights != NULL) {
         printf("weight matrix size: number of outputs(%d, number of inputs %d) \n", _layer->num_outputs, _layer->num_inputs);
 
-        print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
+      //  print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
     }
 
-    if (_layer->gradients != NULL) {
-        printf("gradients \n");
-
-        print_matrix(_layer->gradients, _layer->num_outputs, 1);
-    }
-    if (_layer->gradients_W != NULL) {
-        printf("gradients of weights\n");
-
-        print_matrix(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
-    }
-
-    if (_layer->outputs != NULL) {
-        printf("layer output \n");
-        print_matrix(_layer->outputs, _layer->num_outputs, 1);
-    }
+//    if (_layer->gradients != NULL) {
+//        printf("gradients \n");
+//
+//        print_matrix(_layer->gradients, _layer->num_outputs, 1);
+//    }
+//    if (_layer->gradients_W != NULL) {
+//        printf("gradients of weights\n");
+//
+//        print_matrix(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+//    }
+//
+//    if (_layer->outputs != NULL) {
+//        printf("layer output \n");
+//        print_matrix(_layer->outputs, _layer->num_outputs, 1);
+//    }
 
     if (_layer->previous_layer != NULL) {
         layer *tmp_layer = _layer;

@@ -29,10 +29,17 @@ feedforward_network init_ffn(
         int n_h_neurons,
         int n_out_neurons,
         double learning_rate,
-        int activation
+        int activation,
+        double bottleneck_value
         ) {
 
-    layer *layers = init_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation);
+
+    // make n_h_layers odd if it is even
+    if (n_h_layers % 2 == 0) {
+        n_h_layers += 1;
+    }
+
+    layer *layers = init_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value);
 
     feedforward_network ffn = {
         .num_records = input_num_records,
@@ -44,7 +51,8 @@ feedforward_network init_ffn(
         .input_dims = input_dims,
         .layers = layers,
         .activation_type = activation,
-        .errors = build_array(n_out_neurons, input_dims[1])
+        .errors = build_array(n_out_neurons, input_dims[1]),
+        .is_gradient_checked = 0,
     };
 
     if (verbose == 1) {
@@ -60,7 +68,8 @@ struct layer* init_layers(
         int n_h_layers,
         int n_h_neurons,
         int n_out_neurons,
-        int activation
+        int activation,
+        double bottleneck_value
         ) {
     int i;
 
@@ -81,6 +90,9 @@ struct layer* init_layers(
     }
     layers[0].layer_index = 1;
 
+    int m = n_h_layers + 2;
+    int k;
+
     // hidden layers
     for (i = 1; i < n_h_layers + 1; i++) {
         layer *hidden_layer = (layer *) malloc(sizeof (struct layer));
@@ -89,6 +101,24 @@ struct layer* init_layers(
 
         hidden_layer->num_input_rows = layers[i - 1].num_outputs;
         hidden_layer->num_input_columns = n_h_neurons;
+        k = i + 1;
+
+        // bottleneck of hidden layers 
+        if (k > 2 && bottleneck_value != 0) {
+            if ((m - k + 1) >= k) {
+                hidden_layer->num_inputs = layers[i - 1].num_outputs;
+                hidden_layer->num_outputs = (int) ((double) layers[i - 1].num_outputs / bottleneck_value) + 1;
+
+                hidden_layer->num_input_rows = layers[i - 1].num_outputs;
+                hidden_layer->num_input_columns = (int) ((double) layers[i - 1].num_outputs / bottleneck_value) + 1;
+            } else {
+                hidden_layer->num_inputs = layers[i - 1].num_outputs;
+                hidden_layer->num_outputs = layers[m - k + 1].num_inputs;
+
+                hidden_layer->num_input_rows = layers[i - 1].num_outputs;
+                hidden_layer->num_input_columns = layers[m - k + 1].num_inputs;
+            }
+        }
 
         double **weight_matrix = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
 
@@ -96,7 +126,7 @@ struct layer* init_layers(
         char *layer_name = "hidden layer";
 
         hidden_layer->layer_name = layer_name;
-        hidden_layer->layer_index = (i + 1);
+        hidden_layer->layer_index = k;
         hidden_layer->weights = weight_matrix;
 
         hidden_layer->outputs = build_array(hidden_layer->num_outputs, input_dims[1]);
@@ -107,7 +137,7 @@ struct layer* init_layers(
         hidden_layer->activation_type = activation;
 
         hidden_layer->previous_layer = &layers[i - 1];
-        hidden_layer->next_layer = &layers[i + 1];
+        hidden_layer->next_layer = &layers[k];
         layers[i] = *hidden_layer;
         layers[i - 1].next_layer = hidden_layer;
     }
@@ -126,7 +156,7 @@ struct layer* init_layers(
 
     output_layer->num_input_rows = layers[i - 1].num_outputs;
     output_layer->num_input_columns = n_out_neurons;
-    output_layer->num_inputs = layers[i - 1].num_inputs;
+    output_layer->num_inputs = layers[i - 1].num_outputs;
     output_layer->num_outputs = n_out_neurons;
     output_layer->layer_name = "output layer";
     output_layer->layer_index = (i + 1);
@@ -149,6 +179,8 @@ void forward(feedforward_network ffn, double *data_X) {
     double **layer_input, **outputs;
     layer *_layer, *_prev_layer;
 
+    double **data_X_matrix = convert_vector_to_matrix(data_X, ffn.input_dims[2], 1);
+
     for (l = 1; l < ffn.n_h_layers + 2; l++) {
         _layer = &ffn.layers[l];
         _prev_layer = _layer->previous_layer;
@@ -159,23 +191,13 @@ void forward(feedforward_network ffn, double *data_X) {
 
             clear_array(outputs, _layer->num_outputs, ffn.input_dims[1]);
 
-            // forward output to the next layer
-            for (j = 0; j < _layer->num_outputs; j++) {
-
-                for (i = 0; i < _layer->num_inputs; i++) {
-                    for (int k = 0; k < ffn.input_dims[1]; k++) {
-                        if (_prev_layer->layer_index == 1) {
-                            outputs[j][k] += _layer->weights[j][i] * data_X[i];
-                        } else {
-                            outputs[j][k] += _layer->weights[j][i] * layer_input[i][k];
-                        }
-                    }
-                }
-
-                outputs[j][0] += _layer->bias[j][0];
+            if (_prev_layer->layer_index == 1) {
+                outputs = apply_matrix_product(outputs, _layer->weights, data_X_matrix, _layer->num_outputs, _layer->num_inputs, ffn.input_dims[1]);
+            } else {
+                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, _layer->num_inputs, ffn.input_dims[1]);
             }
 
-            _layer->outputs = outputs;
+            _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, ffn.input_dims[1]);
 
             apply_activation(_layer, ffn);
         }
@@ -305,9 +327,9 @@ void update_weights(feedforward_network ffn) {
 
         for (j = 0; j < _layer->num_outputs; j++) {
             for (i = 0; i < _layer->num_inputs; i++) {
-                // _layer->weights[j][i] -= (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
+                _layer->weights[j][i] -= (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
             }
-            // _layer->bias[j][0] -= (ffn.learning_rate * _layer->gradients_B[j][0]) / (double) normalizing_constant;
+            _layer->bias[j][0] -= (ffn.learning_rate * _layer->gradients_B[j][0]) / (double) normalizing_constant;
         }
 
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
@@ -339,13 +361,19 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
             forward(ffn, data_X[record_index]);
             backward(ffn, data_X[record_index], target_Y[record_index]);
 
-            print_network(ffn);
-            if (i == 0) {
+            //print_network(ffn);
+            if (i % 100 == 0 && record_index == ffn.num_records - 1) {
                 // check the correctness of gradient on the first iteration
-                check_gradient(ffn, data_X[record_index], target_Y[record_index]);
+                check_gradient(&ffn, data_X[record_index], target_Y[record_index]);
+
+                if (ffn.is_gradient_checked == 0) {
+                    printf("Gradient is wrong. Break the training.\n");
+                    is_early_stop = 1;
+                    break;
+                }
             }
 
-            if (verbose == 0) {
+            if (verbose == 1) {
                 printf("======================================================= iteration index %d \n", i);
                 printf("======================================================= record index %d \n", record_index);
                 printf("target output \n");
@@ -355,7 +383,7 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
             }
 
 
-            if (minibach_index != 0 && (minibach_index % ffn.minibatch_size == 0) || i == num_iterations - 1) {
+            if (minibach_index != 0 && (minibach_index % ffn.minibatch_size == 0)) {
                 printf("*********************************errors ***********************\n\n");
                 print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
                 printf("*********************************errors ***********************\n\n");
@@ -377,13 +405,13 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
 
         // if number of records are smaller than batchsize than update weights after records iterations
         if (ffn.num_records < ffn.minibatch_size) {
-            if (verbose == 1) {
+            if (verbose == 0) {
                 printf("*********************************errors ***********************\n");
                 print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
                 printf("*********************************errors ***********************\n\n");
             }
 
-            if (check_early_stopping(ffn) == 1) {
+            if (check_early_stopping(ffn) == 1 && (i != num_iterations - 1)) {
                 printf("======================================================= iteration index %d \n", i);
                 printf("EARLY STOPPING ACHIEVED \n");
                 is_early_stop = 1;
@@ -412,22 +440,22 @@ int check_early_stopping(feedforward_network ffn) {
     return can_be_stopped;
 }
 
-void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
-    if (ffn.is_gradient_checked == 1) {
+void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y) {
+    if (ffn->is_gradient_checked == 1) {
         return;
     }
     // print_network(ffn);
-    ffn.is_gradient_checked = 1;
+    ffn->is_gradient_checked = 1;
 
-    update_weights(ffn);
+    update_weights(*ffn);
 
-    forward(ffn, data_X);
-    backward(ffn, data_X, target_Y);
+    forward(*ffn, data_X);
+    backward(*ffn, data_X, target_Y);
 
     int i, j;
-    layer _first_h_layer = ffn.layers[1];
-    layer _output_layer = ffn.layers[ffn.n_h_layers + 1];
-    double **original_outputs = build_array(ffn.n_out_neurons, ffn.input_dims[1]);
+    layer _first_h_layer = ffn->layers[1];
+    layer _output_layer = ffn->layers[ffn->n_h_layers + 1];
+    double **original_outputs = build_array(ffn->n_out_neurons, ffn->input_dims[1]);
 
     double **outputs = _output_layer.outputs;
     double output_y1;
@@ -438,8 +466,8 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     double calculated_derivative;
     double derivative;
 
-    for (j = 0; j < ffn.n_out_neurons; j++) {
-        for (i = 0; i < ffn.input_dims[1]; i++) {
+    for (j = 0; j < ffn->n_out_neurons; j++) {
+        for (i = 0; i < ffn->input_dims[1]; i++) {
             original_outputs[j][i] = outputs[j][i];
         }
     }
@@ -448,7 +476,7 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
     output_y1 = original_outputs[0][0];
     // test 1: output layer
     _output_layer.weights[0][0] = _output_layer.weights[0][0] + delta_x;
-    forward(ffn, data_X);
+    forward(*ffn, data_X);
 
     outputs = _output_layer.outputs;
 
@@ -463,19 +491,19 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
         printf("\n\n\nderivative of the output layer is correct \n\n\n");
     } else {
         printf("GRADIENT IS NOT CORRECT\n");
-        ffn.is_gradient_checked = 0;
+        ffn->is_gradient_checked = 0;
     }
     _output_layer.weights[0][0] = _output_layer.weights[0][0] - delta_x;
 
     // test 2: first hidden layer
     _first_h_layer.weights[0][0] = _first_h_layer.weights[0][0] + delta_x;
-    forward(ffn, data_X);
+    forward(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     derivative = 0.0;
 
     for (j = 0; j < _output_layer.num_outputs; j++) {
-        for (i = 0; i < ffn.input_dims[1]; i++) {
+        for (i = 0; i < ffn->input_dims[1]; i++) {
             output_y2 = outputs[j][i];
             derivative += ((pow((target_Y[j] - output_y2), 2.0) - pow((target_Y[j] - original_outputs[j][i]), 2.0)) / delta_x);
         }
@@ -489,14 +517,14 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
         printf("\n\n\nderivative of the hidden layer is correct \n\n\n");
     } else {
         printf("GRADIENT IS NOT CORRECT\n");
-        ffn.is_gradient_checked = 0;
+        ffn->is_gradient_checked = 0;
     }
 
     _first_h_layer.weights[0][0] = _first_h_layer.weights[0][0] - delta_x;
 
     // test 3: gradient of bias in output layer
     _output_layer.bias[0][0] = _output_layer.bias[0][0] + delta_x;
-    forward(ffn, data_X);
+    forward(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     output_y2 = outputs[0][0];
@@ -512,19 +540,19 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
         printf("\n\n\nbias derivative of the output layer is correct \n\n\n");
     } else {
         printf("BIAS GRADIENT IS NOT CORRECT\n");
-        ffn.is_gradient_checked = 0;
+        ffn->is_gradient_checked = 0;
     }
 
     // test 4: gradient of bias in first hidden layer
     _first_h_layer.bias[0][0] = _first_h_layer.bias[0][0] + delta_x;
-    forward(ffn, data_X);
+    forward(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     calculated_derivative_bias = _first_h_layer.gradients_B[0][0];
     derivative = 0.0;
 
     for (j = 0; j < _output_layer.num_outputs; j++) {
-        for (i = 0; i < ffn.input_dims[1]; i++) {
+        for (i = 0; i < ffn->input_dims[1]; i++) {
             output_y2 = outputs[j][i];
             derivative += ((pow((target_Y[j] - output_y2), 2.0) - pow((target_Y[j] - original_outputs[j][i]), 2.0)) / delta_x);
         }
@@ -536,11 +564,11 @@ void check_gradient(feedforward_network ffn, double *data_X, double *target_Y) {
         printf("\n\n\n bias derivative of the first hidden layer is correct \n\n\n");
     } else {
         printf("BIAS GRADIENT IS NOT CORRECT\n");
-        ffn.is_gradient_checked = 0;
+        ffn->is_gradient_checked = 0;
     }
 
     _first_h_layer.bias[0][0] = _first_h_layer.bias[0][0] - delta_x;
-    forward(ffn, data_X);
+    forward(*ffn, data_X);
 
     printf("\n----------------------------------------- gradient check end -------------- \n\n\n");
 }
