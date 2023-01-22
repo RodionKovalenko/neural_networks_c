@@ -10,6 +10,7 @@
       <itemPath>network_types/global.h</itemPath>
       <itemPath>layer.h</itemPath>
       <itemPath>math.h</itemPath>
+      <itemPath>utils/optimizer.h</itemPath>
       <itemPath>verbose.h</itemPath>
       <itemPath>weight_initializer.h</itemPath>
     </logicalFolder>
@@ -89,6 +90,8 @@
       </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="utils/optimizer.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="utils/verbose.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/weight_initializer.c" ex="false" tool="0" flavor2="0">
@@ -145,6 +148,8 @@
       <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/optimizer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="utils/verbose.c" ex="false" tool="0" flavor2="0">
       </item>

@@ -7,13 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../layer.h"
-#include "../feedforward_network.h"
-#include "../weight_initializer.h"
-#include "../verbose.h"
-#include "../array.h"
-#include "../math.h"
-#include "../activation.h"
+#include "layer.h"
+#include "feedforward_network.h"
+#include "../utils/weight_initializer.h"
+#include "../utils/verbose.h"
+#include "../utils/array.h"
+#include "../utils/math.h"
+#include "../utils/activation.h"
+#include "../utils/loss_function.h"
 
 static int verbose = 0;
 
@@ -53,6 +54,7 @@ feedforward_network init_ffn(
         .activation_type = activation,
         .errors = build_array(n_out_neurons, input_dims[1]),
         .is_gradient_checked = 0,
+        .loss_function = MEAN_SQUARED_ERROR_LOSS,
     };
 
     if (verbose == 1) {
@@ -181,6 +183,8 @@ void forward(feedforward_network ffn, double *data_X) {
 
     double **data_X_matrix = convert_vector_to_matrix(data_X, ffn.input_dims[2], 1);
 
+    ffn.layers[0].outputs = data_X_matrix;
+
     for (l = 1; l < ffn.n_h_layers + 2; l++) {
         _layer = &ffn.layers[l];
         _prev_layer = _layer->previous_layer;
@@ -192,9 +196,9 @@ void forward(feedforward_network ffn, double *data_X) {
             clear_array(outputs, _layer->num_outputs, ffn.input_dims[1]);
 
             if (_prev_layer->layer_index == 1) {
-                outputs = apply_matrix_product(outputs, _layer->weights, data_X_matrix, _layer->num_outputs, _layer->num_inputs, ffn.input_dims[1]);
+                outputs = apply_matrix_product(outputs, _layer->weights, data_X_matrix, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
             } else {
-                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, _layer->num_inputs, ffn.input_dims[1]);
+                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
             }
 
             _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, ffn.input_dims[1]);
@@ -271,46 +275,77 @@ double apply_deactivation_to_value(layer *_layer, int row, int column, feedforwa
 // https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 
 void backward(feedforward_network ffn, double *data_X, double *target_Y) {
-    int i, j, r, l, k;
-    double value_der;
-    layer *_layer, *_prev_layer, *_next_layer;
+    int l;
+    layer *_layer;
+
+    double **target_Y_matrix = convert_vector_to_matrix(target_Y, ffn.n_out_neurons, ffn.input_dims[1]);
+    double **data_X_matrix = convert_vector_to_matrix(data_X, ffn.input_dims[2], ffn.input_dims[1]);
+
+    // calculate gradients
+    for (l = ffn.n_h_layers + 1; l > 0; l--) {
+        _layer = &ffn.layers[l];
+
+        if (l == (ffn.n_h_layers + 1)) {
+            ffn.errors = get_errors(ffn, _layer->outputs, target_Y, _layer->num_outputs, ffn.input_dims[1]);
+        }
+
+        _layer->gradients = calculate_jacobi_matrix(&ffn, _layer, target_Y_matrix, data_X_matrix);
+    }
+}
+
+double **get_errors(feedforward_network ffn, double **output, double *target_Y, int n_row, int n_col) {
+    int i, j;
     int normalizing_constant = ffn.minibatch_size;
 
     if (ffn.num_records < ffn.minibatch_size) {
         normalizing_constant = ffn.num_records;
     }
 
-    // calculate gradients
-    for (l = ffn.n_h_layers + 1; l > 0; l--) {
-        _layer = &ffn.layers[l];
-        _next_layer = _layer->next_layer;
-        _prev_layer = _layer->previous_layer;
+    for (i = 0; i < n_row; i++) {
+        for (j = 0; j < n_col; j++) {
+            switch (ffn.loss_function) {
+                case MEAN_SQUARED_ERROR_LOSS:
+                    ffn.errors[j][i] += pow((target_Y[j] - output[i][j]), 2.0) / (double) normalizing_constant;
+            }
+        }
+    }
 
-        for (j = 0; j < _layer->num_outputs; j++) {
-            for (i = 0; i < ffn.input_dims[1]; i++) {
-                value_der = apply_deactivation_to_value(_layer, j, i, ffn);
-                if (l == (ffn.n_h_layers + 1)) {
-                    ffn.errors[j][i] += pow((target_Y[j] - _layer->outputs[j][i]), 2.0) / (double) normalizing_constant;
-                    _layer->gradients[j][i] += -2.0 * (target_Y[j] - _layer->outputs[j][i]) * value_der;
-                } else {
-                    for (k = 0; k < _next_layer->num_outputs; k++) {
-                        _layer->gradients[j][i] += _next_layer->gradients[k][i] * _next_layer->weights[k][j];
-                    }
-                    _layer->gradients[j][i] *= value_der;
+    return ffn.errors;
+}
+
+double **calculate_jacobi_matrix(feedforward_network *ffn, layer *_layer, double **targetY, double **data_X) {
+    int i, j, k, n;
+    int n_row = _layer->num_outputs;
+    int d = ffn->input_dims[1];
+    layer *_next_layer = _layer->next_layer;
+    layer *_prev_layer = _layer->previous_layer;
+    double derivative;
+
+    for (i = 0; i < n_row; i++) {
+        for (k = 0; k < d; k++) {
+            derivative = apply_deactivation_to_value(_layer, i, k, *ffn);
+
+            if (_layer->layer_index == (ffn->n_h_layers + 2)) {
+                _layer->gradients[i][k] += -2.0 * (targetY[i][k] - _layer->outputs[i][k]) * derivative;
+            } else {
+                for (n = 0; n < _next_layer->num_outputs; n++) {
+                    _layer->gradients[i][k] += _next_layer->gradients[n][k] * _next_layer->weights[n][i] * derivative;
                 }
+            }
 
-                _layer->gradients_B[j][0] += _layer->gradients[j][i];
+            _layer->gradients_B[i][0] += _layer->gradients[i][k];
 
-                for (k = 0; k < _layer->num_inputs; k++) {
-                    if (l == 1) {
-                        _layer->gradients_W[j][k] += _layer->gradients[j][i] * data_X[k];
-                    } else {
-                        _layer->gradients_W[j][k] += _layer->gradients[j][i] * _prev_layer->outputs[k][i];
-                    }
+            for (j = 0; j < _layer->num_inputs; j++) {
+                if (_layer->layer_index == 2) {
+                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * data_X[j][k];
+                } else {
+                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * _prev_layer->outputs[j][k];
                 }
             }
         }
     }
+
+    return _layer->gradients;
 }
 
 void update_weights(feedforward_network ffn) {

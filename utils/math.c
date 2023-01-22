@@ -34,7 +34,7 @@ double** apply_matrix_product(double **result, double **matrix1, double **matrix
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
             for (k = 0; k < col_k; k++) {
-                result[i][k] += matrix1[i][j] * matrix2[j][k];
+                result[i][j] += matrix1[i][k] * matrix2[k][j];
             }
         }
     }

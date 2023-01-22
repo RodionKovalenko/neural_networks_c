@@ -17,8 +17,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "layer.h"
-#include "feedforward_network.h"
+#include "../network_types/layer.h"
+#include "../network_types/feedforward_network.h"
 
     void print_layer(layer *_layer);
     void print_network(feedforward_network network);

@@ -83,7 +83,7 @@ void testnetwork() {
     // one-dimensional training and target dataset 
     double **data_X = get_input_matrix(input_num_records, input_c);
     double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
-    double bottleneck_value = 4;
+    double bottleneck_value = 5;
 
     set_verbose(0);
     printf("start");

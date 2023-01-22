@@ -38,6 +38,8 @@ extern "C" {
         double **errors;
         struct layer *layers;
         int minibatch_size;
+        int loss_function;
+        int optimizer;
     } feedforward_network;
 
     feedforward_network init_ffn(
@@ -72,6 +74,9 @@ extern "C" {
     void clear_matrix_memory(double **matrix, int rows);
     void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y);
     int check_early_stopping(feedforward_network ffn);
+
+    double **get_errors(feedforward_network ffn, double **output, double *target_Y, int n_row, int n_col);
+    double **calculate_jacobi_matrix(feedforward_network *ffn, layer *_layer, double **targetY, double **data_X);
 
 #ifdef __cplusplus
 }
