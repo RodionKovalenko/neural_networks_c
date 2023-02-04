@@ -1,6 +1,6 @@
-build/Debug/GNU-Linux/network_types/feedforward_network.o: \
- network_types/feedforward_network.c network_types/layer.h \
- network_types/network.h network_types/feedforward_network.h \
+build/Debug/GNU-Linux/network_types/recurrent_network.o: \
+ network_types/recurrent_network.c network_types/layer.h \
+ network_types/network.h network_types/recurrent_network.h \
  network_types/../utils/weight_initializer.h \
  network_types/../utils/verbose.h \
  network_types/../utils/../network_types/layer.h \
@@ -11,7 +11,7 @@ build/Debug/GNU-Linux/network_types/feedforward_network.o: \
  network_types/../utils/optimizer.h
 network_types/layer.h:
 network_types/network.h:
-network_types/feedforward_network.h:
+network_types/recurrent_network.h:
 network_types/../utils/weight_initializer.h:
 network_types/../utils/verbose.h:
 network_types/../utils/../network_types/layer.h:

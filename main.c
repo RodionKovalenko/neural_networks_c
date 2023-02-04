@@ -20,7 +20,9 @@
 #include <limits.h>
 #include "utils/verbose.h"
 #include "network_types/layer.h"
+#include "network_types/network.h"
 #include "network_types/feedforward_network.h"
+#include "network_types/recurrent_network.h"
 #include "utils/array.h"
 #include "utils/activation.h"
 #include "utils/optimizer.h"
@@ -72,7 +74,7 @@ void testnetwork() {
     int input_c = 2;
 
     int n_h_layers = 3;
-    int n_h_neurons = 50;
+    int n_h_neurons = 100;
     int n_out_neurons = 1;
 
     int num_dim[] = {input_num_records, input_r, input_c};
@@ -85,7 +87,7 @@ void testnetwork() {
     // one-dimensional training and target dataset 
     double **data_X = get_input_matrix(input_num_records, input_c);
     double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
-    double bottleneck_value = 5;
+    double bottleneck_value = 4;
 
     set_verbose(0);
     printf("start");
@@ -94,7 +96,29 @@ void testnetwork() {
     clock_t t;
     t = clock();
 
-    feedforward_network feedforward_net = init_ffn(
+//    network feedforward_net = init_ffn(
+//            num_dim,
+//            num_dim_params,
+//            input_num_records,
+//            n_h_layers,
+//            n_h_neurons,
+//            n_out_neurons,
+//            learning_rate,
+//            RELU,
+//            bottleneck_value
+//            );
+//
+//    feedforward_net.optimizer = DEFAULT;
+//    
+//    fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
+//    clear_network(feedforward_net);
+
+    t = clock() - t;
+    double time_taken = ((double) t) / CLOCKS_PER_SEC; // in seconds
+
+    printf("fun() took %f seconds to execute \n", time_taken);
+
+    network rnn = init_rnn(
             num_dim,
             num_dim_params,
             input_num_records,
@@ -105,23 +129,21 @@ void testnetwork() {
             RELU,
             bottleneck_value
             );
-    
- //  feedforward_net.optimizer = ADAM;
 
-    fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
-    clear_network(feedforward_net);
+    fit_rnn(rnn, data_X, target_Y, num_iterations, training_mode);
+    clear_network(rnn);
     clear_matrix_memory(data_X, input_num_records);
     clear_matrix_memory(target_Y, input_num_records);
 
     t = clock() - t;
-    double time_taken = ((double) t) / CLOCKS_PER_SEC; // in seconds
+    time_taken = ((double) t) / CLOCKS_PER_SEC; // in seconds
 
-    printf("fun() took %f seconds to execute \n", time_taken);
+    //printf("fun() took %f seconds to execute \n", time_taken);
 }
 
 int main(int argc, char** argv) {
     testnetwork();
-    
+
     return (EXIT_SUCCESS);
 }
 

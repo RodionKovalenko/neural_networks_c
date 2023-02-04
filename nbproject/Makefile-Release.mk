@@ -37,6 +37,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/network_types/feedforward_network.o \
+	${OBJECTDIR}/network_types/recurrent_network.o \
+	${OBJECTDIR}/utils/activation.o \
 	${OBJECTDIR}/utils/array.o \
 	${OBJECTDIR}/utils/clear_memory.o \
 	${OBJECTDIR}/utils/math.o \
@@ -77,6 +79,16 @@ ${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_netw
 	${MKDIR} -p ${OBJECTDIR}/network_types
 	${RM} "$@.d"
 	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/feedforward_network.o network_types/feedforward_network.c
+
+${OBJECTDIR}/network_types/recurrent_network.o: network_types/recurrent_network.c
+	${MKDIR} -p ${OBJECTDIR}/network_types
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/recurrent_network.o network_types/recurrent_network.c
+
+${OBJECTDIR}/utils/activation.o: utils/activation.c
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/activation.o utils/activation.c
 
 ${OBJECTDIR}/utils/array.o: utils/array.c
 	${MKDIR} -p ${OBJECTDIR}/utils

@@ -2,6 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/cFiles/file.c to edit this template
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 #include <math.h>
 #include "layer.h"
 #include "network.h"
-#include "feedforward_network.h"
+#include "recurrent_network.h"
 #include "../utils/weight_initializer.h"
 #include "../utils/verbose.h"
 #include "../utils/array.h"
@@ -20,54 +21,7 @@
 
 static int verbose = 0;
 
-void set_verbose(int value) {
-    verbose = value;
-}
-
-network init_ffn(
-        int *input_dims,
-        int num_input_params,
-        int input_num_records,
-        int n_h_layers,
-        int n_h_neurons,
-        int n_out_neurons,
-        double learning_rate,
-        int activation,
-        double bottleneck_value
-        ) {
-
-
-    // make n_h_layers odd if it is even
-    if (n_h_layers % 2 == 0) {
-        n_h_layers += 1;
-    }
-
-    layer *layers = init_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value);
-
-    network ffn = {
-        .num_records = input_num_records,
-        .learning_rate = learning_rate,
-        .n_h_layers = n_h_layers,
-        .n_h_neurons = n_h_neurons,
-        .n_out_neurons = n_out_neurons,
-        .minibatch_size = 15,
-        .input_dims = input_dims,
-        .layers = layers,
-        .activation_type = activation,
-        .errors = build_array(n_out_neurons, input_dims[1]),
-        .is_gradient_checked = 0,
-        .loss_function = MEAN_SQUARED_ERROR_LOSS,
-        .optimizer = DEFAULT,
-    };
-    
-    if (verbose == 1) {
-        print_network(ffn);
-    }
-
-    return ffn;
-}
-
-struct layer* init_layers(
+struct layer* init_rnn_layers(
         int *input_dims,
         int num_input_params,
         int n_h_layers,
@@ -190,7 +144,50 @@ struct layer* init_layers(
     return layers;
 }
 
-void forward(network ffn, double *data_X) {
+network init_rnn(
+        int *input_dims,
+        int num_input_params,
+        int input_num_records,
+        int n_h_layers,
+        int n_h_neurons,
+        int n_out_neurons,
+        double learning_rate,
+        int activation,
+        double bottleneck_value
+        ) {
+
+
+    // make n_h_layers odd if it is even
+    if (n_h_layers % 2 == 0) {
+        n_h_layers += 1;
+    }
+
+    layer *layers = init_rnn_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value);
+
+    network ffn = {
+        .num_records = input_num_records,
+        .learning_rate = learning_rate,
+        .n_h_layers = n_h_layers,
+        .n_h_neurons = n_h_neurons,
+        .n_out_neurons = n_out_neurons,
+        .minibatch_size = 15,
+        .input_dims = input_dims,
+        .layers = layers,
+        .activation_type = activation,
+        .errors = build_array(n_out_neurons, input_dims[1]),
+        .is_gradient_checked = 0,
+        .loss_function = MEAN_SQUARED_ERROR_LOSS,
+        .optimizer = DEFAULT,
+    };
+
+    if (verbose == 1) {
+        print_network(ffn);
+    }
+
+    return ffn;
+}
+
+void forward_rnn(network ffn, double *data_X) {
     int i, j, r, l, k;
     double **layer_input, **outputs;
     layer *_layer, *_prev_layer;
@@ -218,12 +215,16 @@ void forward(network ffn, double *data_X) {
             _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, ffn.input_dims[1]);
 
             apply_activation(_layer, ffn);
+            
+//            printf("layer index %d \n", _layer->layer_index);
+//            print_matrix_double(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
         }
     }
 }
 
 // https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
-void backward(network ffn, double *data_X, double *target_Y) {
+
+void backward_rnn(network ffn, double *data_X, double *target_Y) {
     int l;
     layer *_layer;
 
@@ -235,14 +236,14 @@ void backward(network ffn, double *data_X, double *target_Y) {
         _layer = &ffn.layers[l];
 
         if (l == (ffn.n_h_layers + 1)) {
-            ffn.errors = get_errors(ffn, _layer->outputs, target_Y, _layer->num_outputs, ffn.input_dims[1]);
+            ffn.errors = get_errors_rnn(ffn, _layer->outputs, target_Y, _layer->num_outputs, ffn.input_dims[1]);
         }
 
-        _layer->gradients = calculate_jacobi_matrix(&ffn, _layer, target_Y_matrix, data_X_matrix);
+        _layer->gradients = calculate_jacobi_matrix_rnn(&ffn, _layer, target_Y_matrix, data_X_matrix);
     }
 }
 
-double **get_errors(network ffn, double **output, double *target_Y, int n_row, int n_col) {
+double **get_errors_rnn(network ffn, double **output, double *target_Y, int n_row, int n_col) {
     int i, j;
     int normalizing_constant = ffn.minibatch_size;
 
@@ -262,7 +263,7 @@ double **get_errors(network ffn, double **output, double *target_Y, int n_row, i
     return ffn.errors;
 }
 
-double **calculate_jacobi_matrix(network *ffn, layer *_layer, double **targetY, double **data_X) {
+double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X) {
     int i, j, k, n;
     int n_row = _layer->num_outputs;
     int d = ffn->input_dims[1];
@@ -297,7 +298,7 @@ double **calculate_jacobi_matrix(network *ffn, layer *_layer, double **targetY, 
     return _layer->gradients;
 }
 
-void update_weights(network ffn, int i_iteration) {
+void update_weights_rnn(network ffn, int i_iteration) {
     int i, j, r, l, k;
     int normalizing_constant = ffn.minibatch_size;
     double p = 0.9999, pf = 0.9;
@@ -321,9 +322,6 @@ void update_weights(network ffn, int i_iteration) {
                         _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
                         ffn.learning_rate *= 0.999;
                         break;
-                    case ADAM:
-                        update_weight_adam(&ffn, _layer, normalizing_constant, t, i, j, p, pf);
-                        break;
                     default:
                         _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
                         break;
@@ -337,9 +335,6 @@ void update_weights(network ffn, int i_iteration) {
             switch (ffn.optimizer) {
                 case DEFAULT:
                     _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
-                    break;
-                case ADAM:
-                    update_bias_adam(&ffn, _layer, normalizing_constant, t, i, j, p, pf);
                     break;
                 default:
                     _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
@@ -363,30 +358,7 @@ void update_weights(network ffn, int i_iteration) {
     }
 }
 
-void update_weight_adam(network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf) {
-    double learning_rate;
-
-    ffn->learning_rate = ffn->learning_rate * (pow(1.0 - pow(p, t), 0.5) / (1.0 - pow(pf, t)));
-    learning_rate = (ffn->learning_rate * _layer->adam_B[j][i]) / pow(_layer->adam_A[j][i] + 0.0001, 0.5);
-
-    _layer->weights[j][i] -= learning_rate / (double) normalizing_constant;
-
-    _layer->adam_A[j][i] = (p * _layer->adam_A[j][i] + (1.0 - p) * pow(_layer->gradients_W[j][i], 2.0));
-    _layer->adam_B[j][i] = (pf * _layer->adam_B[j][i] + (1.0 - pf) * _layer->gradients_W[j][i]);
-}
-
-void update_bias_adam(network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf) {
-    double learning_rate_bias;
-
-    learning_rate_bias = (ffn->learning_rate * _layer->adam_B_bias[j][i]) / pow(_layer->adam_A_bias[j][i] + 0.0001, 0.5);
-
-    _layer->bias[j][0] -= learning_rate_bias / (double) normalizing_constant;
-
-    _layer->adam_A_bias[j][0] = (p * _layer->adam_A_bias[j][0] + (1.0 - p) * pow(_layer->gradients_B[j][0], 2.0));
-    _layer->adam_B_bias[j][0] = (pf * _layer->adam_B_bias[j][i] + (1.0 - pf) * _layer->gradients_B[j][0]);
-}
-
-network fit(network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode) {
+network fit_rnn(network rnn, double **data_X, double **target_Y, int num_iterations, int training_mode) {
     int i, j, r;
     int record_index;
     int minibach_index;
@@ -398,16 +370,16 @@ network fit(network ffn, double **data_X, double **target_Y, int num_iterations,
             printf("processed: %f percent\n\n\n", ((double) (i + 1) / (double) num_iterations));
         }
 
-        for (record_index = 0; record_index < ffn.num_records && is_early_stop == 0; record_index++) {
-            forward(ffn, data_X[record_index]);
-            backward(ffn, data_X[record_index], target_Y[record_index]);
+        for (record_index = 0; record_index < rnn.num_records && is_early_stop == 0; record_index++) {
+            forward_rnn(rnn, data_X[record_index]);
+            backward_rnn(rnn, data_X[record_index], target_Y[record_index]);
 
             //print_network(ffn);
-            if (i % 100 == 0 && record_index == ffn.num_records - 1) {
+            if (i % 100 == 0 && record_index == rnn.num_records - 1) {
                 // check the correctness of gradient on the first iteration
-                check_gradient(&ffn, data_X[record_index], target_Y[record_index]);
+                check_gradient_rnn(&rnn, data_X[record_index], target_Y[record_index]);
 
-                if (ffn.is_gradient_checked == 0) {
+                if (rnn.is_gradient_checked == 0) {
                     printf("Gradient is wrong. Break the training.\n");
                     is_early_stop = 1;
                     break;
@@ -418,53 +390,53 @@ network fit(network ffn, double **data_X, double **target_Y, int num_iterations,
                 printf("======================================================= iteration index %d \n", i);
                 printf("======================================================= record index %d \n", record_index);
                 printf("target output \n");
-                print_vector(target_Y[record_index], ffn.n_out_neurons);
+                print_vector(target_Y[record_index], rnn.n_out_neurons);
                 printf("network output \n");
-                print_matrix_double(ffn.layers[ffn.n_h_layers + 1].outputs, ffn.n_out_neurons, ffn.input_dims[1]);
+                print_matrix_double(rnn.layers[rnn.n_h_layers + 1].outputs, rnn.n_out_neurons, rnn.input_dims[1]);
             }
 
 
-            if (minibach_index != 0 && (minibach_index % ffn.minibatch_size == 0)) {
+            if (minibach_index != 0 && (minibach_index % rnn.minibatch_size == 0)) {
                 printf("*********************************errors ***********************\n\n");
-                print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
+                print_matrix_double(rnn.errors, rnn.n_out_neurons, rnn.input_dims[1]);
                 printf("*********************************errors ***********************\n\n");
 
-                if (check_early_stopping(ffn) == 1) {
+                if (check_early_stopping_rnn(rnn) == 1) {
                     printf("======================================================= iteration index %d \n", i);
                     printf("EARLY STOPPING ACHIEVED \n");
                     is_early_stop = 1;
                     break;
                 }
-                update_weights(ffn, i);
+                update_weights_rnn(rnn, i);
                 // reset minibatch index
                 minibach_index = 0;
             }
-            if (ffn.num_records > ffn.minibatch_size) {
+            if (rnn.num_records > rnn.minibatch_size) {
                 minibach_index++;
             }
         }
 
         // if number of records are smaller than batchsize than update weights after records iterations
-        if (ffn.num_records < ffn.minibatch_size) {
+        if (rnn.num_records < rnn.minibatch_size) {
             if (verbose == 0) {
                 printf("*********************************errors ***********************\n");
-                print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
+                print_matrix_double(rnn.errors, rnn.n_out_neurons, rnn.input_dims[1]);
                 printf("*********************************errors ***********************\n\n");
             }
 
-            if (check_early_stopping(ffn) == 1 && (i != num_iterations - 1)) {
+            if (check_early_stopping_rnn(rnn) == 1 && (i != num_iterations - 1)) {
                 printf("======================================================= iteration index %d \n", i);
                 printf("EARLY STOPPING ACHIEVED \n");
                 is_early_stop = 1;
 
                 break;
             }
-            update_weights(ffn, i);
+            update_weights_rnn(rnn, i);
         }
     }
 }
 
-int check_early_stopping(network ffn) {
+int check_early_stopping_rnn(network ffn) {
     int i, j;
 
     int can_be_stopped = 0;
@@ -483,17 +455,20 @@ int check_early_stopping(network ffn) {
     return can_be_stopped;
 }
 
-void check_gradient(network *ffn, double *data_X, double *target_Y) {
+void check_gradient_rnn(network *ffn, double *data_X, double *target_Y) {
     if (ffn->is_gradient_checked == 1) {
         return;
     }
+   
+    print_vector(data_X, 2);
+    
     // print_network(ffn);
     ffn->is_gradient_checked = 1;
 
-    update_weights(*ffn, 2);
+    update_weights_rnn(*ffn, 2);
 
-    forward(*ffn, data_X);
-    backward(*ffn, data_X, target_Y);
+    forward_rnn(*ffn, data_X);
+    backward_rnn(*ffn, data_X, target_Y);
 
     int i, j;
     layer _first_h_layer = ffn->layers[1];
@@ -519,7 +494,7 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
     output_y1 = original_outputs[0][0];
     // test 1: output layer
     _output_layer.weights[0][0] = _output_layer.weights[0][0] + delta_x;
-    forward(*ffn, data_X);
+    forward_rnn(*ffn, data_X);
 
     outputs = _output_layer.outputs;
 
@@ -540,7 +515,7 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
 
     // test 2: first hidden layer
     _first_h_layer.weights[0][0] = _first_h_layer.weights[0][0] + delta_x;
-    forward(*ffn, data_X);
+    forward_rnn(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     derivative = 0.0;
@@ -567,7 +542,7 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
 
     // test 3: gradient of bias in output layer
     _output_layer.bias[0][0] = _output_layer.bias[0][0] + delta_x;
-    forward(*ffn, data_X);
+    forward_rnn(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     output_y2 = outputs[0][0];
@@ -588,7 +563,7 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
 
     // test 4: gradient of bias in first hidden layer
     _first_h_layer.bias[0][0] = _first_h_layer.bias[0][0] + delta_x;
-    forward(*ffn, data_X);
+    forward_rnn(*ffn, data_X);
 
     outputs = _output_layer.outputs;
     calculated_derivative_bias = _first_h_layer.gradients_B[0][0];
@@ -612,41 +587,7 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
     }
 
     _first_h_layer.bias[0][0] = _first_h_layer.bias[0][0] - delta_x;
-    forward(*ffn, data_X);
+    forward_rnn(*ffn, data_X);
 
     printf("\n----------------------------------------- gradient check end -------------- \n\n\n");
-}
-
-void clear_network(network ffn) {
-    int l = 0;
-    layer *_layer;
-
-    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
-        _layer = &ffn.layers[l];
-        if (ffn.layers[l].errors != NULL) {
-
-            clear_matrix_memory(ffn.layers[l].errors, ffn.n_out_neurons);
-        }
-
-        free(_layer->next_layer);
-
-        clear_matrix_memory(_layer->gradients, _layer->num_outputs);
-        clear_matrix_memory(_layer->gradients_W, _layer->num_outputs);
-        clear_matrix_memory(_layer->bias, _layer->num_outputs);
-
-        clear_matrix_memory(_layer->weights, _layer->num_outputs);
-        clear_matrix_memory(_layer->outputs, _layer->num_outputs);
-    }
-
-    free(ffn.layers);
-}
-
-void clear_matrix_memory(double **matrix, int rows) {
-    int i;
-
-    for (i = 0; i < rows; i++) {
-        free(matrix[i]);
-    }
-
-    free(matrix);
 }

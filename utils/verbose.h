@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 #include "../network_types/layer.h"
-#include "../network_types/feedforward_network.h"
+#include "../network_types/network.h"
 
     void print_layer(layer *_layer);
-    void print_network(feedforward_network network);
+    void print_network(network network);
     void print_matrix_int(int **matrix, int rows, int columns);
     void print_matrix_double(double **matrix, int rows, int columns);
-    void print_forward_updates(feedforward_network ffn, layer *_layer);
+    void print_forward_updates(network ffn, layer *_layer);
     void print_vector(double *matrix, int columns);
 
 #ifdef __cplusplus

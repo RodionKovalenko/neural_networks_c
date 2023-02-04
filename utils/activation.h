@@ -16,6 +16,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+#include "../network_types/layer.h"
+#include "../network_types/network.h"
 
     enum activation {
         SIGMOID,
@@ -30,6 +33,9 @@ extern "C" {
         SELU
     };
 
+    double **apply_activation(layer *_layer, network ffn);
+    double **apply_deactivation(layer *_layer, network ffn);
+    double apply_deactivation_to_value(layer *_layer, int row, int column, network ffn);
 
 #ifdef __cplusplus
 }

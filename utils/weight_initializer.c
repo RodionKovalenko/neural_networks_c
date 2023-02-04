@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <time.h>
 
 double ** init_random_weights(double **weight_matrix, int n_output, int n_input) {
     int i, j;

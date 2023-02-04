@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../network_types/layer.h"
-#include "../network_types/feedforward_network.h"
+#include "../network_types/network.h"
 
 // generic implemenation of print_matrix
 #define print_matrix(a, b, c) _Generic(a, double**:print_matrix_double, int**:print_matrix_int)(a, b, c)
@@ -90,7 +90,7 @@ void print_layer(layer *_layer) {
     printf("\n");
 }
 
-void print_network(feedforward_network network) {
+void print_network(network network) {
     printf("verbose mode \n\n");
     int i, j;
 
