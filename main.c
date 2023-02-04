@@ -15,13 +15,15 @@
 #include<time.h>
 #include<string.h>
 #include <math.h>
-#include "activation.h"
+#include "utils/activation.h"
 #include <float.h>
 #include <limits.h>
-#include "verbose.h"
-#include "layer.h"
-#include "feedforward_network.h"
-#include "array.h"
+#include "utils/verbose.h"
+#include "network_types/layer.h"
+#include "network_types/feedforward_network.h"
+#include "utils/array.h"
+#include "utils/activation.h"
+#include "utils/optimizer.h"
 
 double** get_input_matrix(int input_r, int input_c) {
     double **input_matrix = (double**) malloc(input_r * (sizeof (double)));
@@ -69,15 +71,15 @@ void testnetwork() {
     int input_r = 1;
     int input_c = 2;
 
-    int n_h_layers = 1;
-    int n_h_neurons = 100;
+    int n_h_layers = 3;
+    int n_h_neurons = 50;
     int n_out_neurons = 1;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.7;
-    int num_iterations = 800;
+    double learning_rate = 0.01;
+    int num_iterations = 1000;
     int training_mode = 0;
 
     // one-dimensional training and target dataset 
@@ -92,8 +94,6 @@ void testnetwork() {
     clock_t t;
     t = clock();
 
-
-
     feedforward_network feedforward_net = init_ffn(
             num_dim,
             num_dim_params,
@@ -102,9 +102,11 @@ void testnetwork() {
             n_h_neurons,
             n_out_neurons,
             learning_rate,
-            SIGMOID,
+            RELU,
             bottleneck_value
             );
+    
+ //  feedforward_net.optimizer = ADAM;
 
     fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
     clear_network(feedforward_net);
@@ -119,7 +121,7 @@ void testnetwork() {
 
 int main(int argc, char** argv) {
     testnetwork();
-
+    
     return (EXIT_SUCCESS);
 }
 

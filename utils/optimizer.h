@@ -17,7 +17,8 @@
 extern "C" {
 #endif
 
-     enum optimizer {
+    enum optimizer {
+        DEFAULT,
         ADAM,
         ADAM_GRAD,
         NESTOROV,
@@ -29,7 +30,7 @@ extern "C" {
         QUASI_NEWTON,
         POLYAK_AVERAGING
     };
-    
+
 
 
 #ifdef __cplusplus

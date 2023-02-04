@@ -35,6 +35,7 @@ extern "C" {
         int n_out_neurons;
         // learning rate/
         double learning_rate;
+        double learning_rate_b;
         double **errors;
         struct layer *layers;
         int minibatch_size;
@@ -69,7 +70,7 @@ extern "C" {
     double **apply_activation(layer *_layer, feedforward_network ffn);
     double **apply_deactivation(layer *_layer, feedforward_network ffn);
     double apply_deactivation_to_value(layer *_layer, int row, int column, feedforward_network ffn);
-    void update_weights(feedforward_network ffn);
+    void update_weights(feedforward_network ffn, int i_iteration);
     void clear_network(feedforward_network ffn);
     void clear_matrix_memory(double **matrix, int rows);
     void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y);
@@ -77,6 +78,9 @@ extern "C" {
 
     double **get_errors(feedforward_network ffn, double **output, double *target_Y, int n_row, int n_col);
     double **calculate_jacobi_matrix(feedforward_network *ffn, layer *_layer, double **targetY, double **data_X);
+    
+    void update_weight_adam(feedforward_network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf);
+    void update_bias_adam(feedforward_network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf);
 
 #ifdef __cplusplus
 }

@@ -15,6 +15,7 @@
 #include "../utils/math.h"
 #include "../utils/activation.h"
 #include "../utils/loss_function.h"
+#include "../utils/optimizer.h"
 
 static int verbose = 0;
 
@@ -55,6 +56,7 @@ feedforward_network init_ffn(
         .errors = build_array(n_out_neurons, input_dims[1]),
         .is_gradient_checked = 0,
         .loss_function = MEAN_SQUARED_ERROR_LOSS,
+        .optimizer = DEFAULT,
     };
 
     if (verbose == 1) {
@@ -127,6 +129,11 @@ struct layer* init_layers(
         init_random_weights(weight_matrix, hidden_layer->num_outputs, hidden_layer->num_inputs);
         char *layer_name = "hidden layer";
 
+        hidden_layer->adam_A = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->adam_B = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->adam_A_bias = build_array(hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->adam_B_bias = build_array(hidden_layer->num_outputs, input_dims[1]);
+
         hidden_layer->layer_name = layer_name;
         hidden_layer->layer_index = k;
         hidden_layer->weights = weight_matrix;
@@ -168,6 +175,12 @@ struct layer* init_layers(
     output_layer->gradients = build_array(output_layer->num_outputs, input_dims[1]);
     output_layer->gradients_B = build_array(output_layer->num_outputs, 1);
     output_layer->gradients_W = build_array(output_layer->num_outputs, output_layer->num_inputs);
+
+    output_layer->adam_A = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->adam_B = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->adam_A_bias = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->adam_B_bias = build_array(output_layer->num_outputs, input_dims[1]);
+
     output_layer->activation_type = activation;
 
     layers[i] = *output_layer;
@@ -348,9 +361,13 @@ double **calculate_jacobi_matrix(feedforward_network *ffn, layer *_layer, double
     return _layer->gradients;
 }
 
-void update_weights(feedforward_network ffn) {
+void update_weights(feedforward_network ffn, int i_iteration) {
     int i, j, r, l, k;
     int normalizing_constant = ffn.minibatch_size;
+    double p = 0.9999, pf = 0.9;
+    double t = (double) i_iteration + 1;
+    double prev_weight, prev_bias;
+    double beta = 0.2;
     layer *_layer;
 
     if (ffn.num_records < ffn.minibatch_size) {
@@ -362,9 +379,39 @@ void update_weights(feedforward_network ffn) {
 
         for (j = 0; j < _layer->num_outputs; j++) {
             for (i = 0; i < _layer->num_inputs; i++) {
-                _layer->weights[j][i] -= (ffn.learning_rate * _layer->gradients_W[j][i]) / (double) normalizing_constant;
+                prev_weight = _layer->weights[j][i];
+                switch (ffn.optimizer) {
+                    case DEFAULT:
+                        _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
+                        ffn.learning_rate *= 0.999;
+                        break;
+                    case ADAM:
+                        update_weight_adam(&ffn, _layer, normalizing_constant, t, i, j, p, pf);
+                        break;
+                    default:
+                        _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
+                        break;
+                }
+
+                _layer->weights[j][i] = beta * prev_weight + (1.0 - beta) * _layer->weights[j][i];
             }
-            _layer->bias[j][0] -= (ffn.learning_rate * _layer->gradients_B[j][0]) / (double) normalizing_constant;
+
+            prev_bias = _layer->bias[j][0];
+
+            switch (ffn.optimizer) {
+                case DEFAULT:
+                    _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
+
+                    break;
+                case ADAM:
+                    update_bias_adam(&ffn, _layer, normalizing_constant, t, i, j, p, pf);
+                    break;
+                default:
+                    _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
+                    break;
+            }
+
+            _layer->bias[j][0] = beta * prev_bias + (1.0 - beta) * _layer->bias[j][0];
         }
 
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
@@ -374,10 +421,34 @@ void update_weights(feedforward_network ffn) {
     }
 
     if (verbose == 1) {
+
         printf("***********************************************************************\n");
         printf("weight are updated \n");
         printf("***********************************************************************\n\n");
     }
+}
+
+void update_weight_adam(feedforward_network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf) {
+    double learning_rate;
+
+    ffn->learning_rate = ffn->learning_rate * (pow(1.0 - pow(p, t), 0.5) / (1.0 - pow(pf, t)));
+    learning_rate = (ffn->learning_rate * _layer->adam_B[j][i]) / pow(_layer->adam_A[j][i] + 0.0001, 0.5);
+
+    _layer->weights[j][i] -= learning_rate / (double) normalizing_constant;
+
+    _layer->adam_A[j][i] = (p * _layer->adam_A[j][i] + (1.0 - p) * pow(_layer->gradients_W[j][i], 2.0));
+    _layer->adam_B[j][i] = (pf * _layer->adam_B[j][i] + (1.0 - pf) * _layer->gradients_W[j][i]);
+}
+
+void update_bias_adam(feedforward_network *ffn, layer *_layer, int normalizing_constant, double t, int i, int j, double p, double pf) {
+    double learning_rate_bias;
+
+    learning_rate_bias = (ffn->learning_rate * _layer->adam_B_bias[j][i]) / pow(_layer->adam_A_bias[j][i] + 0.0001, 0.5);
+
+    _layer->bias[j][0] -= learning_rate_bias / (double) normalizing_constant;
+
+    _layer->adam_A_bias[j][0] = (p * _layer->adam_A_bias[j][0] + (1.0 - p) * pow(_layer->gradients_B[j][0], 2.0));
+    _layer->adam_B_bias[j][0] = (pf * _layer->adam_B_bias[j][i] + (1.0 - pf) * _layer->gradients_B[j][0]);
 }
 
 feedforward_network fit(feedforward_network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode) {
@@ -429,7 +500,7 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
                     is_early_stop = 1;
                     break;
                 }
-                update_weights(ffn);
+                update_weights(ffn, i);
                 // reset minibatch index
                 minibach_index = 0;
             }
@@ -450,9 +521,10 @@ feedforward_network fit(feedforward_network ffn, double **data_X, double **targe
                 printf("======================================================= iteration index %d \n", i);
                 printf("EARLY STOPPING ACHIEVED \n");
                 is_early_stop = 1;
+
                 break;
             }
-            update_weights(ffn);
+            update_weights(ffn, i);
         }
     }
 }
@@ -467,6 +539,7 @@ int check_early_stopping(feedforward_network ffn) {
             if (ffn.errors[i][j] < 0.0001) {
                 can_be_stopped = 1;
             } else {
+
                 can_be_stopped = 0;
             }
         }
@@ -482,7 +555,7 @@ void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y) 
     // print_network(ffn);
     ffn->is_gradient_checked = 1;
 
-    update_weights(*ffn);
+    update_weights(*ffn, 2);
 
     forward(*ffn, data_X);
     backward(*ffn, data_X, target_Y);
@@ -598,6 +671,7 @@ void check_gradient(feedforward_network *ffn, double *data_X, double *target_Y) 
     if (fabs(fabs(derivative) - fabs(calculated_derivative_bias)) < 0.0001) {
         printf("\n\n\n bias derivative of the first hidden layer is correct \n\n\n");
     } else {
+
         printf("BIAS GRADIENT IS NOT CORRECT\n");
         ffn->is_gradient_checked = 0;
     }
@@ -615,6 +689,7 @@ void clear_network(feedforward_network ffn) {
     for (l = ffn.n_h_layers + 1; l >= 1; l--) {
         _layer = &ffn.layers[l];
         if (ffn.layers[l].errors != NULL) {
+
             clear_matrix_memory(ffn.layers[l].errors, ffn.n_out_neurons);
         }
 
