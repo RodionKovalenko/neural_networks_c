@@ -37,6 +37,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/network_types/feedforward_network.o \
+	${OBJECTDIR}/network_types/recurrent_network.o \
+	${OBJECTDIR}/utils/activation.o \
+	${OBJECTDIR}/utils/array.o \
+	${OBJECTDIR}/utils/clear_memory.o \
 	${OBJECTDIR}/utils/math.o \
 	${OBJECTDIR}/utils/verbose.o \
 	${OBJECTDIR}/utils/weight_initializer.o
@@ -64,7 +68,7 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS} -lm
 
 ${OBJECTDIR}/main.o: main.c
 	${MKDIR} -p ${OBJECTDIR}
@@ -75,6 +79,26 @@ ${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_netw
 	${MKDIR} -p ${OBJECTDIR}/network_types
 	${RM} "$@.d"
 	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/feedforward_network.o network_types/feedforward_network.c
+
+${OBJECTDIR}/network_types/recurrent_network.o: network_types/recurrent_network.c
+	${MKDIR} -p ${OBJECTDIR}/network_types
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/recurrent_network.o network_types/recurrent_network.c
+
+${OBJECTDIR}/utils/activation.o: utils/activation.c
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/activation.o utils/activation.c
+
+${OBJECTDIR}/utils/array.o: utils/array.c
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/array.o utils/array.c
+
+${OBJECTDIR}/utils/clear_memory.o: utils/clear_memory.c
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/clear_memory.o utils/clear_memory.c
 
 ${OBJECTDIR}/utils/math.o: utils/math.c
 	${MKDIR} -p ${OBJECTDIR}/utils

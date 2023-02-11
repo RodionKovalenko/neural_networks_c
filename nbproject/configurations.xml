@@ -5,9 +5,14 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>activation.h</itemPath>
+      <itemPath>array.h</itemPath>
       <itemPath>feedforward_network.h</itemPath>
+      <itemPath>network_types/feedforward_network.h</itemPath>
+      <itemPath>network_types/global.h</itemPath>
       <itemPath>layer.h</itemPath>
       <itemPath>math.h</itemPath>
+      <itemPath>utils/optimizer.h</itemPath>
+      <itemPath>network_types/recurrent_network.h</itemPath>
       <itemPath>verbose.h</itemPath>
       <itemPath>weight_initializer.h</itemPath>
     </logicalFolder>
@@ -18,9 +23,13 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>utils/activation.c</itemPath>
+      <itemPath>utils/array.c</itemPath>
+      <itemPath>utils/clear_memory.c</itemPath>
       <itemPath>network_types/feedforward_network.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>utils/math.c</itemPath>
+      <itemPath>network_types/recurrent_network.c</itemPath>
       <itemPath>utils/verbose.c</itemPath>
       <itemPath>utils/weight_initializer.c</itemPath>
     </logicalFolder>
@@ -38,22 +47,31 @@
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
-    <conf name="Debug" type="1">
+    <conf name="Debug" type="1" platformSpecific="true">
       <toolsSet>
         <compilerSet>default</compilerSet>
+        <platform>2</platform>
         <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
+        <rebuildPropChanged>true</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
           <stripSymbols>true</stripSymbols>
+          <architecture>2</architecture>
           <standard>3</standard>
+          <commandLine>-lm</commandLine>
         </cTool>
+        <asmTool>
+          <architecture>2</architecture>
+        </asmTool>
         <linkerTool>
+          <linkerCopySharedLibs>true</linkerCopySharedLibs>
           <commandLine>-lm</commandLine>
         </linkerTool>
       </compileType>
       <item path="activation.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="array.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="feedforward_network.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -68,7 +86,26 @@
             tool="0"
             flavor2="0">
       </item>
+      <item path="network_types/feedforward_network.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="network_types/global.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="network_types/recurrent_network.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="network_types/recurrent_network.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utils/activation.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/array.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/optimizer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="utils/verbose.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -98,8 +135,13 @@
         <asmTool>
           <developmentMode>5</developmentMode>
         </asmTool>
+        <linkerTool>
+          <commandLine>-lm</commandLine>
+        </linkerTool>
       </compileType>
       <item path="activation.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="array.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="feedforward_network.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -114,7 +156,26 @@
             tool="0"
             flavor2="0">
       </item>
+      <item path="network_types/feedforward_network.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="network_types/global.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="network_types/recurrent_network.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="network_types/recurrent_network.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utils/activation.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/array.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/optimizer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="utils/verbose.c" ex="false" tool="0" flavor2="0">
       </item>

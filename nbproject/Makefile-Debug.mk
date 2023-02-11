@@ -37,13 +37,17 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/network_types/feedforward_network.o \
+	${OBJECTDIR}/network_types/recurrent_network.o \
+	${OBJECTDIR}/utils/activation.o \
+	${OBJECTDIR}/utils/array.o \
+	${OBJECTDIR}/utils/clear_memory.o \
 	${OBJECTDIR}/utils/math.o \
 	${OBJECTDIR}/utils/verbose.o \
 	${OBJECTDIR}/utils/weight_initializer.o
 
 
 # C Compiler Flags
-CFLAGS=
+CFLAGS=-m64 -lm
 
 # CC Compiler Flags
 CCFLAGS=
@@ -53,7 +57,7 @@ CXXFLAGS=
 FFLAGS=
 
 # Assembler Flags
-ASFLAGS=
+ASFLAGS=--64
 
 # Link Libraries and Options
 LDLIBSOPTIONS=
@@ -66,27 +70,47 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS} -lm
 
-${OBJECTDIR}/main.o: main.c
+${OBJECTDIR}/main.o: main.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.c
 
-${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_network.c
+${OBJECTDIR}/network_types/feedforward_network.o: network_types/feedforward_network.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/network_types
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/feedforward_network.o network_types/feedforward_network.c
 
-${OBJECTDIR}/utils/math.o: utils/math.c
+${OBJECTDIR}/network_types/recurrent_network.o: network_types/recurrent_network.c nbproject/Makefile-${CND_CONF}.mk
+	${MKDIR} -p ${OBJECTDIR}/network_types
+	${RM} "$@.d"
+	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/network_types/recurrent_network.o network_types/recurrent_network.c
+
+${OBJECTDIR}/utils/activation.o: utils/activation.c nbproject/Makefile-${CND_CONF}.mk
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/activation.o utils/activation.c
+
+${OBJECTDIR}/utils/array.o: utils/array.c nbproject/Makefile-${CND_CONF}.mk
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/array.o utils/array.c
+
+${OBJECTDIR}/utils/clear_memory.o: utils/clear_memory.c nbproject/Makefile-${CND_CONF}.mk
+	${MKDIR} -p ${OBJECTDIR}/utils
+	${RM} "$@.d"
+	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/clear_memory.o utils/clear_memory.c
+
+${OBJECTDIR}/utils/math.o: utils/math.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/math.o utils/math.c
 
-${OBJECTDIR}/utils/verbose.o: utils/verbose.c
+${OBJECTDIR}/utils/verbose.o: utils/verbose.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/verbose.o utils/verbose.c
 
-${OBJECTDIR}/utils/weight_initializer.o: utils/weight_initializer.c
+${OBJECTDIR}/utils/weight_initializer.o: utils/weight_initializer.c nbproject/Makefile-${CND_CONF}.mk
 	${MKDIR} -p ${OBJECTDIR}/utils
 	${RM} "$@.d"
 	$(COMPILE.c) -g -s -std=c99 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/utils/weight_initializer.o utils/weight_initializer.c
