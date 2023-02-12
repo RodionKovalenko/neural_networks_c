@@ -33,6 +33,14 @@ extern "C" {
         int n_h_neurons;
         // number of output neurons in the last output layer
         int n_out_neurons;
+        // for rnn params: batch_size, n_features, n_steps
+        // batch_size: number of samples in one batch
+        int batch_size;
+        // n_features: number of features in one sample
+        int n_features;
+        // n_steps: total number of observations 
+        int n_steps;
+        int window_size;
         // learning rate/
         double learning_rate;
         double learning_rate_b;

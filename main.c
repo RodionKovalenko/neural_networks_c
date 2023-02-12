@@ -73,7 +73,7 @@ void testnetwork() {
     int input_r = 1;
     int input_c = 2;
 
-    int n_h_layers = 3;
+    int n_h_layers = 1;
     int n_h_neurons = 100;
     int n_out_neurons = 1;
 
@@ -81,13 +81,13 @@ void testnetwork() {
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
     double learning_rate = 0.01;
-    int num_iterations = 1000;
+    int num_iterations = 200;
     int training_mode = 0;
 
     // one-dimensional training and target dataset 
     double **data_X = get_input_matrix(input_num_records, input_c);
     double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
-    double bottleneck_value = 4;
+    double bottleneck_value = 0;
 
     set_verbose(0);
     printf("start");
@@ -96,27 +96,66 @@ void testnetwork() {
     clock_t t;
     t = clock();
 
-//    network feedforward_net = init_ffn(
-//            num_dim,
-//            num_dim_params,
-//            input_num_records,
-//            n_h_layers,
-//            n_h_neurons,
-//            n_out_neurons,
-//            learning_rate,
-//            RELU,
-//            bottleneck_value
-//            );
-//
-//    feedforward_net.optimizer = DEFAULT;
-//    
-//    fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
-//    clear_network(feedforward_net);
+    network feedforward_net = init_ffn(
+            num_dim,
+            num_dim_params,
+            input_num_records,
+            n_h_layers,
+            n_h_neurons,
+            n_out_neurons,
+            learning_rate,
+            RELU,
+            bottleneck_value
+            );
+
+    feedforward_net.optimizer = DEFAULT;
+
+    fit(feedforward_net, data_X, target_Y, num_iterations, training_mode);
 
     t = clock() - t;
     double time_taken = ((double) t) / CLOCKS_PER_SEC; // in seconds
 
-    printf("fun() took %f seconds to execute \n", time_taken);
+    printf("ffn training took %f seconds to execute \n", time_taken);
+
+    clear_network(feedforward_net);
+    clear_matrix_memory(data_X, input_num_records);
+    clear_matrix_memory(target_Y, input_num_records);
+}
+
+void test_rrn_network() {
+    // number of data records
+    int input_num_records = 4;
+    // number of dimensions in record
+    int input_r = 1;
+    int input_c = 2;
+
+    int n_h_layers = 1;
+    int n_h_neurons = 100;
+    int n_out_neurons = 1;
+
+    int num_dim[] = {input_num_records, input_r, input_c};
+    int num_dim_params = sizeof (num_dim) / sizeof (int);
+
+    double learning_rate = 0.01;
+    int num_iterations = 200;
+    int training_mode = 0;
+
+    // one-dimensional training and target dataset 
+    double **data_X = get_input_matrix(input_num_records, input_c);
+    double **target_Y = get_target_matrix(input_num_records, n_out_neurons);
+    double bottleneck_value = 0;
+
+    set_verbose(0);
+    printf("start");
+
+    // Calculate the time taken by fun()
+    clock_t t;
+    t = clock();
+
+    printf("\n \n \n recurrent neural network training\n\n\n\n");
+
+    t = clock() - t;
+    double time_taken;
 
     network rnn = init_rnn(
             num_dim,
@@ -130,19 +169,23 @@ void testnetwork() {
             bottleneck_value
             );
 
-    fit_rnn(rnn, data_X, target_Y, num_iterations, training_mode);
-    clear_network(rnn);
-    clear_matrix_memory(data_X, input_num_records);
-    clear_matrix_memory(target_Y, input_num_records);
+    rnn.optimizer = DEFAULT;
+
+    //fit_rnn(rnn, data_X, target_Y, num_iterations, training_mode);
 
     t = clock() - t;
     time_taken = ((double) t) / CLOCKS_PER_SEC; // in seconds
 
-    //printf("fun() took %f seconds to execute \n", time_taken);
+    printf("training rnn took %f seconds to execute \n", time_taken);
+
+    clear_network(rnn);
+    clear_matrix_memory(data_X, input_num_records);
+    clear_matrix_memory(target_Y, input_num_records);
 }
 
 int main(int argc, char** argv) {
-    testnetwork();
+    //testnetwork();
+    test_rrn_network();
 
     return (EXIT_SUCCESS);
 }
