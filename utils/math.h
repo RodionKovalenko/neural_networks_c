@@ -19,11 +19,13 @@ extern "C" {
     void set_verbose(int verbose);
     double** matrix_product(double **matrix1, double **matrix2, int row, int col, int col_k);
     double** apply_matrix_product(double **result, double **matrix1, double **matrix2, int row, int col, int col_k);
+    double** apply_matrix_product_transposed(double **result, double **matrix1, double **matrix2, int row, int col, int col_k);
     double get_random_value();
     double** init_weight_matrix(int weight_r, int weight_c);
     double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_sum(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_add_vector(double **matrix_1, double *vec, int row, int col);
+    double** matrix_add_matrix(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_add_bias(double **matrix_1, double **vec, int row, int col);
 
     double** matrix_transpose(double **matrix, int row, int col);

@@ -17,6 +17,7 @@
 #include "../utils/activation.h"
 #include "../utils/loss_function.h"
 #include "../utils/optimizer.h"
+#include "../utils/clear_memory.h"
 
 static int verbose = 0;
 
@@ -191,7 +192,7 @@ struct layer* init_layers(
 }
 
 void forward(network ffn, double *data_X) {
-    int i, j, r, l, k;
+    int l;
     double **layer_input, **outputs;
     layer *_layer, *_prev_layer;
 
@@ -206,8 +207,6 @@ void forward(network ffn, double *data_X) {
         if (_prev_layer != NULL) {
             layer_input = _prev_layer->outputs;
             outputs = _layer->outputs;
-
-            clear_array(outputs, _layer->num_outputs, ffn.input_dims[1]);
 
             if (_prev_layer->layer_index == 1) {
                 outputs = apply_matrix_product(outputs, _layer->weights, data_X_matrix, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
@@ -617,36 +616,3 @@ void check_gradient(network *ffn, double *data_X, double *target_Y) {
     printf("\n----------------------------------------- gradient check end -------------- \n\n\n");
 }
 
-void clear_network(network ffn) {
-    int l = 0;
-    layer *_layer;
-
-    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
-        _layer = &ffn.layers[l];
-        if (ffn.layers[l].errors != NULL) {
-
-            clear_matrix_memory(ffn.layers[l].errors, ffn.n_out_neurons);
-        }
-
-        free(_layer->next_layer);
-
-        clear_matrix_memory(_layer->gradients, _layer->num_outputs);
-        clear_matrix_memory(_layer->gradients_W, _layer->num_outputs);
-        clear_matrix_memory(_layer->bias, _layer->num_outputs);
-
-        clear_matrix_memory(_layer->weights, _layer->num_outputs);
-        clear_matrix_memory(_layer->outputs, _layer->num_outputs);
-    }
-
-    free(ffn.layers);
-}
-
-void clear_matrix_memory(double **matrix, int rows) {
-    int i;
-
-    for (i = 0; i < rows; i++) {
-        free(matrix[i]);
-    }
-
-    free(matrix);
-}

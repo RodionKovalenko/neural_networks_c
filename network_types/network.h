@@ -16,6 +16,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+    #include "layer.h"
     void set_verbose(int verbose);
 
     typedef struct network {
@@ -34,6 +36,7 @@ extern "C" {
         // number of output neurons in the last output layer
         int n_out_neurons;
         // for rnn params: batch_size, n_features, n_steps
+        int n_batches;
         // batch_size: number of samples in one batch
         int batch_size;
         // n_features: number of features in one sample
@@ -55,8 +58,6 @@ extern "C" {
     network fit(network ffn, double **data_X, double **target_Y, int num_iterations, int training_mode);
     void forward(network ffn, double *data_X);
     void backward(network ffn, double *data_X, double *target_Y);
-    void clear_network(network ffn);
-    void clear_matrix_memory(double **matrix, int rows);
     void check_gradient(network *ffn, double *data_X, double *target_Y);
     int check_early_stopping(network ffn);
 

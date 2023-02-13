@@ -24,6 +24,7 @@ extern "C" {
     void print_network(network network);
     void print_matrix_int(int **matrix, int rows, int columns);
     void print_matrix_double(double **matrix, int rows, int columns);
+    void print_matrix_double_3d(double ***matrix, int rows, int columns, int n_values);
     void print_forward_updates(network ffn, layer *_layer);
     void print_vector(double *matrix, int columns);
 

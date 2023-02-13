@@ -11,6 +11,21 @@
 // generic implemenation of print_matrix
 #define print_matrix(a, b, c) _Generic(a, double**:print_matrix_double, int**:print_matrix_int)(a, b, c)
 
+void print_matrix_double_3d(double ***matrix, int rows, int columns, int n_values) {
+    int i, j, k;
+
+    for (i = 0; i < rows; i++) {
+        for (j = 0; j < columns; j++) {
+            for (k = 0; k < n_values; k++) {
+                printf(" %f, ", *(*(*(matrix + i) + j) + k));
+            }
+
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
 void print_matrix_double(double **matrix, int rows, int columns) {
     int i, j;
 
@@ -51,7 +66,7 @@ void print_layer(layer *_layer) {
     if (_layer->weights != NULL) {
         printf("weight matrix size: number of outputs(%d, number of inputs %d) \n", _layer->num_outputs, _layer->num_inputs);
 
-      //  print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
+        //  print_matrix(_layer->weights, _layer->num_outputs, _layer->num_inputs);
     }
 
     if (_layer->gradients != NULL) {
@@ -67,7 +82,11 @@ void print_layer(layer *_layer) {
 
     if (_layer->outputs != NULL) {
         printf("layer output \n");
-        print_matrix(_layer->outputs, _layer->num_outputs, 1);
+        if (_layer->layer_index == 1) {
+            print_matrix(_layer->outputs, 1, _layer->num_outputs);
+        } else {
+            print_matrix(_layer->outputs, _layer->num_outputs, 1);
+        }
     }
 
     if (_layer->previous_layer != NULL) {

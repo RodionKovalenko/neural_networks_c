@@ -6,6 +6,7 @@
                    projectFiles="true">
       <itemPath>activation.h</itemPath>
       <itemPath>array.h</itemPath>
+      <itemPath>utils/clear_memory.h</itemPath>
       <itemPath>feedforward_network.h</itemPath>
       <itemPath>network_types/feedforward_network.h</itemPath>
       <itemPath>network_types/global.h</itemPath>
@@ -103,6 +104,8 @@
       </item>
       <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="utils/clear_memory.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/optimizer.h" ex="false" tool="3" flavor2="0">
@@ -172,6 +175,8 @@
       <item path="utils/array.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="utils/clear_memory.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="utils/clear_memory.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="utils/math.c" ex="false" tool="0" flavor2="0">
       </item>

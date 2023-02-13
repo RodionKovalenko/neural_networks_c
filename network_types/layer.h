@@ -20,8 +20,10 @@ extern "C" {
 
     typedef struct layer {
         double **weights;
+        double **prev_layer_weights;
         // layer output in 2_d: [record_index][input_dimension]
         double **outputs;
+        double **prev_layer_outputs;
         double **errors;
         double **bias;
         double **gradients;
