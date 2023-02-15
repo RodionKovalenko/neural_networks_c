@@ -52,6 +52,8 @@ extern "C" {
     
     double** multiply_two_to_matrix(double **matrix, int row, int col);
     double multiply_two_derivative_to_value(double value);
+    
+    double** copy_array(double **matrix1, double **matrix2, int row, int col);
 
 
 

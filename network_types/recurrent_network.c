@@ -28,7 +28,8 @@ struct layer* init_rnn_layers(
         int n_h_neurons,
         int n_out_neurons,
         int activation,
-        double bottleneck_value
+        double bottleneck_value,
+        int batch_size
         ) {
     int i;
 
@@ -98,6 +99,7 @@ struct layer* init_rnn_layers(
         hidden_layer->prev_layer_weights = rnn_prev_weight_matrix;
 
         hidden_layer->outputs = build_array(hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->layer_prev_outputs = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->bias = build_array(hidden_layer->num_outputs, 1);
         hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_B = build_array(hidden_layer->num_outputs, 1);
@@ -157,7 +159,8 @@ network init_rnn(
         int n_out_neurons,
         double learning_rate,
         int activation,
-        double bottleneck_value
+        double bottleneck_value,
+        int batch_size
         ) {
 
     // make n_h_layers odd if it is even
@@ -165,7 +168,7 @@ network init_rnn(
         n_h_layers += 1;
     }
 
-    layer *layers = init_rnn_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value);
+    layer *layers = init_rnn_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value, batch_size);
 
     network ffn = {
         .num_records = input_num_records,
@@ -182,6 +185,8 @@ network init_rnn(
         .loss_function = MEAN_SQUARED_ERROR_LOSS,
         .optimizer = DEFAULT,
     };
+
+    printf("layer features %d \n", ffn.n_features);
 
     ffn.layers[0].outputs = build_array(1, ffn.n_features);
 
@@ -203,7 +208,7 @@ void forward_rnn(network ffn, double **data_X) {
             _prev_layer = _layer->previous_layer;
 
             if (l == 1) {
-                _layer->previous_layer->outputs[0] = data_X[d];
+                _prev_layer->outputs[0] = data_X[d];
             }
 
             if (_prev_layer != NULL) {
@@ -216,20 +221,23 @@ void forward_rnn(network ffn, double **data_X) {
                     outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
                 }
 
-                if (_prev_layer->prev_layer_outputs != NULL && _layer->prev_layer_weights != NULL) {
-                    printf(" prev layer outputs: layer index %d\n", _layer->layer_index);
-//                    _prev_layer->prev_layer_outputs = apply_matrix_product(_prev_layer->prev_layer_outputs, _layer->prev_layer_weights, outputs, _layer->num_outputs, ffn.input_dims[1], _layer->num_outputs);
-//                    outputs = matrix_add_matrix(_prev_layer->prev_layer_outputs, outputs, _layer->num_outputs, ffn.input_dims[1]);
+                if (_layer->layer_prev_outputs != NULL && _layer->prev_layer_weights != NULL && d > 0) {
+                    //                    printf("hidden d index %d\n", _layer->layer_index);
+                    //                    print_matrix_double_3d(_layer->layer_prev_outputs, d, _layer->num_outputs, ffn.input_dims[1]);
+
+                    _layer->layer_prev_outputs[d] = apply_matrix_product(_layer->layer_prev_outputs[d], _layer->prev_layer_weights, _layer->layer_prev_outputs[d - 1], _layer->num_outputs, ffn.input_dims[1], _layer->num_outputs);
+                    outputs = matrix_add_matrix(_layer->layer_prev_outputs[d], outputs, _layer->num_outputs, ffn.input_dims[1]);
                 }
 
                 _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, ffn.input_dims[1]);
-
-                _layer->prev_layer_outputs = outputs;
-
                 apply_activation(_layer, ffn);
 
+                if (_layer->layer_prev_outputs != NULL) {
+                    _layer->layer_prev_outputs[d] = copy_array(_layer->layer_prev_outputs[d], _layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
+                }
+
                 if (l == ffn.n_h_layers + 1) {
-                    printf("layer index %d\n", _layer->layer_index);
+                    printf("final layer index %d\n", _layer->layer_index);
                     print_matrix_double(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
                 }
             }
@@ -389,8 +397,10 @@ network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_itera
             forward_rnn(ffn, data_X[record_index]);
             backward_rnn(ffn, data_X[record_index], target_Y[record_index]);
 
-            //            is_early_stop = 1;
-            //            break;
+            is_early_stop = 1;
+
+            //print_network(ffn);
+            break;
             //            //print_network(ffn);
             //            if (i % 100 == 0 && record_index == ffn.num_records - 1) {
             //                // check the correctness of gradient on the first iteration

@@ -25,7 +25,8 @@ extern "C" {
             int n_out_neurons,
             double learning_rate,
             int activation,
-            double bottleneck_value
+            double bottleneck_value,
+            int batch_size
             );
 
     struct layer* init_rnn_layers(
@@ -35,9 +36,10 @@ extern "C" {
             int n_h_neurons,
             int n_,
             int activation,
-            double bottleneck_value
+            double bottleneck_value,
+            int batch_size
             );
-    
+
     network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_iterations, int training_mode);
     void forward_rnn(network ffn, double **data_X);
     void backward_rnn(network ffn, double **data_X, double **target_Y);

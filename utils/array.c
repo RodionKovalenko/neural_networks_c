@@ -20,9 +20,9 @@ double*** build_array_3d(int n_records, int n_row, int n_col) {
     int i,k;
     double ***result_matrix = (double***) malloc(n_records * sizeof (double));
 
-    for (i = 0; i < n_row; i++) {
+    for (i = 0; i < n_records; i++) {
         result_matrix[i] = (double **) malloc(n_row * sizeof (double));
-        for (k = 0; k < n_col; k++) {
+        for (k = 0; k < n_row; k++) {
             result_matrix[i][k] = (double*) malloc(n_col * sizeof (double));
         }
     }

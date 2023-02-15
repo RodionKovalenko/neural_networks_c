@@ -28,6 +28,17 @@ double** matrix_product(double **matrix1, double **matrix2, int row, int col, in
     return matrix3;
 }
 
+double** copy_array(double **matrix1, double **matrix2, int row, int col) {
+    int i, j;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix1[i][j] = matrix2[i][j];
+        }
+    }
+    return matrix1;
+}
+
 double** apply_matrix_product(double **result, double **matrix1, double **matrix2, int row, int col, int col_k) {
     int i, j, k;
 

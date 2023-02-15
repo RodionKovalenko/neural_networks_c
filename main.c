@@ -182,8 +182,8 @@ void test_rrn_network() {
     int input_r = 1;
     int input_c = n_features;
 
-    int n_h_layers = 3;
-    int n_h_neurons = 100;
+    int n_h_layers = 1;
+    int n_h_neurons = 5;
     int n_out_neurons = 1;
 
     int num_dim[] = {input_num_records, input_r, input_c};
@@ -218,8 +218,9 @@ void test_rrn_network() {
             n_h_neurons,
             n_out_neurons,
             learning_rate,
-            RELU,
-            bottleneck_value
+            LEAKY_RELU,
+            bottleneck_value,
+            batch_size
             );
 
     rnn.optimizer = DEFAULT;
