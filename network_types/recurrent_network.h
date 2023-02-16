@@ -40,16 +40,19 @@ extern "C" {
             int batch_size
             );
 
-    network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_iterations, int training_mode);
-    void forward_rnn(network ffn, double **data_X);
-    void backward_rnn(network ffn, double **data_X, double **target_Y);
-    void check_gradient_rnn(network *ffn, double **data_X, double **target_Y);
-    int check_early_stopping_rnn(network ffn);
+    network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_iterations, int training_mode);
+    void forward_rnn(network rnn, double **data_X);
+    void forward_sequence(network rrn, double **data_X, int d);
 
-    void update_weights_rnn(network ffn, int i_iteration);
+    void backward_rnn(network rrn, double **data_X, double **target_Y);
+    void backward_sequence(network rnn, double **data_X, double **target_Y, int d);
+    void check_gradient_rnn(network *rrn, double **data_X, double **target_Y);
+    int check_early_stopping_rnn(network rrn);
 
-    double **get_errors_rnn(network ffn, double **output, double **target_Y, int n_row, int n_col);
-    double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X);
+    void update_weights_rnn(network rrn, int i_iteration);
+
+    double **get_errors_rnn(network rrn, double **output, double **target_Y, int n_row, int d);
+    double **calculate_jacobi_matrix_rnn(network *rrn, layer *_layer, double **targetY, double **data_X, int d);
 
 #ifdef __cplusplus
 }

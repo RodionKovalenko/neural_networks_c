@@ -171,7 +171,7 @@ void testnetwork() {
 
 void test_rrn_network() {
     // number of data records
-    int input_num_records = 4;
+    int input_num_records;
     int n_batches = 7;
     int batch_size = 5;
     int n_features = 3;
@@ -182,23 +182,23 @@ void test_rrn_network() {
     int input_r = 1;
     int input_c = n_features;
 
-    int n_h_layers = 1;
-    int n_h_neurons = 5;
-    int n_out_neurons = 1;
+    int n_h_layers = 3;
+    int n_h_neurons = 100;
+    int n_out_neurons = 4;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.01;
-    int num_iterations = 2;
+    double learning_rate = 0.0000006;
+    int num_iterations = 24000;
     int training_mode = 0;
 
     // one-dimensional training and target dataset 
     double ***data_X = get_input_matrix_rnn(n_batches, batch_size, n_features);
     double ***target_Y = get_target_matrix_rnn(n_batches, batch_size, n_out_neurons);
-    double bottleneck_value = 0;
+    double bottleneck_value = 5;
 
-    set_verbose(0);
+    set_verbose(1);
     printf("start");
 
     // Calculate the time taken by fun()

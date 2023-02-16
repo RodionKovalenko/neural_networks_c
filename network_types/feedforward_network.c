@@ -253,7 +253,7 @@ double **get_errors(network ffn, double **output, double *target_Y, int n_row, i
         for (j = 0; j < n_col; j++) {
             switch (ffn.loss_function) {
                 case MEAN_SQUARED_ERROR_LOSS:
-                    ffn.errors[j][i] += pow((target_Y[j] - output[i][j]), 2.0) / (double) normalizing_constant;
+                    ffn.errors[j][i] += pow((target_Y[i] - output[i][j]), 2.0) / (double) normalizing_constant;
             }
         }
     }

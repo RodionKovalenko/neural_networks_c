@@ -99,7 +99,7 @@ struct layer* init_rnn_layers(
         hidden_layer->prev_layer_weights = rnn_prev_weight_matrix;
 
         hidden_layer->outputs = build_array(hidden_layer->num_outputs, input_dims[1]);
-        hidden_layer->layer_prev_outputs = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->layer_sequence_outputs = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->bias = build_array(hidden_layer->num_outputs, 1);
         hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_B = build_array(hidden_layer->num_outputs, 1);
@@ -132,6 +132,7 @@ struct layer* init_rnn_layers(
     output_layer->layer_index = (i + 1);
     output_layer->previous_layer = &layers[i - 1];
     output_layer->outputs = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->layer_sequence_outputs = build_array_3d(batch_size, output_layer->num_outputs, input_dims[1]);
     output_layer->bias = build_array(output_layer->num_outputs, 1);
     output_layer->gradients = build_array(output_layer->num_outputs, input_dims[1]);
     output_layer->gradients_B = build_array(output_layer->num_outputs, 1);
@@ -170,7 +171,7 @@ network init_rnn(
 
     layer *layers = init_rnn_layers(input_dims, num_input_params, n_h_layers, n_h_neurons, n_out_neurons, activation, bottleneck_value, batch_size);
 
-    network ffn = {
+    network rnn = {
         .num_records = input_num_records,
         .learning_rate = learning_rate,
         .n_h_layers = n_h_layers,
@@ -186,137 +187,136 @@ network init_rnn(
         .optimizer = DEFAULT,
     };
 
-    printf("layer features %d \n", ffn.n_features);
+    printf("layer features %d \n", rnn.n_features);
 
-    ffn.layers[0].outputs = build_array(1, ffn.n_features);
+    rnn.layers[0].outputs = build_array(1, rnn.n_features);
 
     if (verbose == 1) {
-        print_network(ffn);
+        print_network(rnn);
     }
 
-    return ffn;
+    return rnn;
 }
 
-void forward_rnn(network ffn, double **data_X) {
-    int d, l;
+void forward_rnn(network rnn, double **data_X) {
+    int d;
+    for (d = 0; d < rnn.batch_size; d++) {
+        forward_sequence(rnn, data_X, d);
+    }
+}
+
+void forward_sequence(network rnn, double **data_X, int d) {
+    int l;
     double **layer_input, **outputs;
     layer *_layer, *_prev_layer;
 
-    for (d = 0; d < ffn.batch_size; d++) {
-        for (l = 1; l < ffn.n_h_layers + 2; l++) {
-            _layer = &ffn.layers[l];
-            _prev_layer = _layer->previous_layer;
+    for (l = 1; l < rnn.n_h_layers + 2; l++) {
+        _layer = &rnn.layers[l];
+        _prev_layer = _layer->previous_layer;
 
-            if (l == 1) {
-                _prev_layer->outputs[0] = data_X[d];
+        if (l == 1) {
+            _prev_layer->outputs[0] = data_X[d];
+        }
+
+        if (_prev_layer != NULL) {
+            layer_input = _prev_layer->outputs;
+            outputs = _layer->outputs;
+
+            if (_prev_layer->layer_index == 1) {
+                outputs = apply_matrix_product_transposed(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn.input_dims[1], _layer->num_inputs);
+            } else {
+                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn.input_dims[1], _layer->num_inputs);
             }
 
-            if (_prev_layer != NULL) {
-                layer_input = _prev_layer->outputs;
-                outputs = _layer->outputs;
-
-                if (_prev_layer->layer_index == 1) {
-                    outputs = apply_matrix_product_transposed(outputs, _layer->weights, layer_input, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
-                } else {
-                    outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, ffn.input_dims[1], _layer->num_inputs);
-                }
-
-                if (_layer->layer_prev_outputs != NULL && _layer->prev_layer_weights != NULL && d > 0) {
-                    //                    printf("hidden d index %d\n", _layer->layer_index);
-                    //                    print_matrix_double_3d(_layer->layer_prev_outputs, d, _layer->num_outputs, ffn.input_dims[1]);
-
-                    _layer->layer_prev_outputs[d] = apply_matrix_product(_layer->layer_prev_outputs[d], _layer->prev_layer_weights, _layer->layer_prev_outputs[d - 1], _layer->num_outputs, ffn.input_dims[1], _layer->num_outputs);
-                    outputs = matrix_add_matrix(_layer->layer_prev_outputs[d], outputs, _layer->num_outputs, ffn.input_dims[1]);
-                }
-
-                _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, ffn.input_dims[1]);
-                apply_activation(_layer, ffn);
-
-                if (_layer->layer_prev_outputs != NULL) {
-                    _layer->layer_prev_outputs[d] = copy_array(_layer->layer_prev_outputs[d], _layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
-                }
-
-                if (l == ffn.n_h_layers + 1) {
-                    printf("final layer index %d\n", _layer->layer_index);
-                    print_matrix_double(_layer->outputs, _layer->num_outputs, ffn.input_dims[1]);
-                }
+            if (_layer->layer_sequence_outputs != NULL && _layer->prev_layer_weights != NULL && d > 0) {
+                _layer->layer_sequence_outputs[d] = apply_matrix_product(_layer->layer_sequence_outputs[d], _layer->prev_layer_weights, _layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn.input_dims[1], _layer->num_outputs);
+                outputs = matrix_add_matrix(_layer->layer_sequence_outputs[d], outputs, _layer->num_outputs, rnn.input_dims[1]);
             }
+
+            _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn.input_dims[1]);
+            apply_activation(_layer, rnn);
+
+            _layer->layer_sequence_outputs[d] = copy_array(_layer->layer_sequence_outputs[d], _layer->outputs, _layer->num_outputs, rnn.input_dims[1]);
         }
     }
 }
 
 // https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 
-void backward_rnn(network ffn, double **data_X, double **target_Y) {
-    //    int l;
-    //    layer *_layer;
-    //
-    //    double **target_Y_matrix = convert_vector_to_matrix(target_Y, ffn.n_out_neurons, ffn.input_dims[1]);
-    //    double **data_X_matrix = convert_vector_to_matrix(data_X, ffn.input_dims[2], ffn.input_dims[1]);
-    //
-    //    // calculate gradients
-    //    for (l = ffn.n_h_layers + 1; l > 0; l--) {
-    //        _layer = &ffn.layers[l];
-    //
-    //        if (l == (ffn.n_h_layers + 1)) {
-    //            ffn.errors = get_errors_rnn(ffn, _layer->outputs, target_Y, _layer->num_outputs, ffn.input_dims[1]);
-    //        }
-    //
-    //        _layer->gradients = calculate_jacobi_matrix_rnn(&ffn, _layer, target_Y_matrix, data_X_matrix);
-    //    }
+void backward_rnn(network rnn, double **data_X, double **target_Y) {
+    int d;
+    
+    for (d = 0; d < rnn.batch_size; d++) {
+        backward_sequence(rnn, data_X, target_Y, d);
+    }
 }
 
-double **get_errors_rnn(network ffn, double **output, double **target_Y, int n_row, int n_col) {
-    //    int i, j;
-    //    int normalizing_constant = ffn.minibatch_size;
-    //
-    //    if (ffn.num_records < ffn.minibatch_size) {
-    //        normalizing_constant = ffn.num_records;
-    //    }
-    //
-    //    for (i = 0; i < n_row; i++) {
-    //        for (j = 0; j < n_col; j++) {
-    //            switch (ffn.loss_function) {
-    //                case MEAN_SQUARED_ERROR_LOSS:
-    //                    ffn.errors[j][i] += pow((target_Y[j] - output[i][j]), 2.0) / (double) normalizing_constant;
-    //            }
-    //        }
-    //    }
-    //
+void backward_sequence(network rnn, double **data_X, double **target_Y, int d) {
+    int l;
+    layer *_layer;
+
+    // calculate gradients
+    for (l = rnn.n_h_layers + 1; l > 0; l--) {
+        _layer = &rnn.layers[l];
+
+        if (l == (rnn.n_h_layers + 1)) {
+            rnn.errors = get_errors_rnn(rnn, _layer->layer_sequence_outputs[d], target_Y, _layer->num_outputs, d);
+        }
+
+        _layer->gradients = calculate_jacobi_matrix_rnn(&rnn, _layer, target_Y, data_X, d);
+    }
+}
+
+double **get_errors_rnn(network ffn, double **output, double **target_Y, int n_row, int d) {
+    int i, j;
+    int normalizing_constant = ffn.minibatch_size;
+
+    if (ffn.num_records < ffn.minibatch_size) {
+        normalizing_constant = ffn.num_records;
+    }
+
+    for (i = 0; i < n_row; i++) {
+        switch (ffn.loss_function) {
+            case MEAN_SQUARED_ERROR_LOSS:
+                ffn.errors[i][0] += pow((target_Y[d][i] - output[i][0]), 2.0) / (double) normalizing_constant;
+                break;
+        }
+    }
+
     return ffn.errors;
 }
 
-double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X) {
-    //    int i, j, k, n;
-    //    int n_row = _layer->num_outputs;
-    //    int d = ffn->input_dims[1];
-    //    layer *_next_layer = _layer->next_layer;
-    //    layer *_prev_layer = _layer->previous_layer;
-    //    double derivative;
-    //
-    //    for (i = 0; i < n_row; i++) {
-    //        for (k = 0; k < d; k++) {
-    //            derivative = apply_deactivation_to_value(_layer, i, k, *ffn);
-    //
-    //            if (_layer->layer_index == (ffn->n_h_layers + 2)) {
-    //                _layer->gradients[i][k] += -2.0 * (targetY[i][k] - _layer->outputs[i][k]) * derivative;
-    //            } else {
-    //                for (n = 0; n < _next_layer->num_outputs; n++) {
-    //                    _layer->gradients[i][k] += _next_layer->gradients[n][k] * _next_layer->weights[n][i] * derivative;
-    //                }
-    //            }
-    //
-    //            _layer->gradients_B[i][0] += _layer->gradients[i][k];
-    //
-    //            for (j = 0; j < _layer->num_inputs; j++) {
-    //                if (_layer->layer_index == 2) {
-    //                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * data_X[j][k];
-    //                } else {
-    //                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * _prev_layer->outputs[j][k];
-    //                }
-    //            }
-    //        }
-    //    }
+double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X, int s) {
+    int i, j, k, n;
+    int n_row = _layer->num_outputs;
+    int d = ffn->input_dims[1];
+    layer *_next_layer = _layer->next_layer;
+    layer *_prev_layer = _layer->previous_layer;
+    double derivative;
+
+    for (i = 0; i < n_row; i++) {
+        for (k = 0; k < d; k++) {
+            derivative = apply_deactivation_to_value(_layer, i, k, *ffn);
+
+            if (_layer->layer_index == (ffn->n_h_layers + 2)) {
+                _layer->gradients[i][k] += -2.0 * (targetY[s][i] - _layer->layer_sequence_outputs[s][i][k]) * derivative;
+            } else {
+                for (n = 0; n < _next_layer->num_outputs; n++) {
+                    _layer->gradients[i][k] += _next_layer->gradients[n][k] * _next_layer->weights[n][i] * derivative;
+                }
+            }
+
+            _layer->gradients_B[i][0] += _layer->gradients[i][k];
+
+            for (j = 0; j < _layer->num_inputs; j++) {
+                if (_layer->layer_index == 2) {
+                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * data_X[s][j];
+                } else {
+                    _layer->gradients_W[i][j] += _layer->gradients[i][k] * _prev_layer->layer_sequence_outputs[s][j][k];
+                }
+            }
+        }
+    }
 
     return _layer->gradients;
 }
@@ -364,7 +364,7 @@ void update_weights_rnn(network ffn, int i_iteration) {
                     break;
             }
 
-            _layer->bias[j][0] = beta * prev_bias + (1.0 - beta) * _layer->bias[j][0];
+            // _layer->bias[j][0] = beta * prev_bias + (1.0 - beta) * _layer->bias[j][0];
         }
 
         clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
@@ -381,7 +381,7 @@ void update_weights_rnn(network ffn, int i_iteration) {
     }
 }
 
-network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_iterations, int training_mode) {
+network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_iterations, int training_mode) {
     int i, j, r;
     int record_index;
     int minibach_index;
@@ -393,15 +393,10 @@ network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_itera
             printf("processed: %f percent\n\n\n", ((double) (i + 1) / (double) num_iterations));
         }
 
-        for (record_index = 0; record_index < ffn.num_records && is_early_stop == 0; record_index++) {
-            forward_rnn(ffn, data_X[record_index]);
-            backward_rnn(ffn, data_X[record_index], target_Y[record_index]);
+        for (record_index = 0; record_index < rnn.num_records && is_early_stop == 0; record_index++) {
+            forward_rnn(rnn, data_X[record_index]);
+            backward_rnn(rnn, data_X[record_index], target_Y[record_index]);
 
-            is_early_stop = 1;
-
-            //print_network(ffn);
-            break;
-            //            //print_network(ffn);
             //            if (i % 100 == 0 && record_index == ffn.num_records - 1) {
             //                // check the correctness of gradient on the first iteration
             //                check_gradient(&ffn, data_X[record_index], target_Y[record_index]);
@@ -412,45 +407,39 @@ network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_itera
             //                    break;
             //                }
             //            }
-            //
-            //            if (verbose == 1) {
-            //                printf("======================================================= iteration index %d \n", i);
-            //                printf("======================================================= record index %d \n", record_index);
-            //                printf("target output \n");
-            //                print_vector(target_Y[record_index], ffn.n_out_neurons);
-            //                printf("network output \n");
-            //                print_matrix_double(ffn.layers[ffn.n_h_layers + 1].outputs, ffn.n_out_neurons, ffn.input_dims[1]);
-            //            }
-            //
-            //
-            //            if (minibach_index != 0 && (minibach_index % ffn.minibatch_size == 0)) {
-            //                printf("*********************************errors ***********************\n\n");
-            //                print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
-            //                printf("*********************************errors ***********************\n\n");
-            //
-            //                if (check_early_stopping(ffn) == 1) {
-            //                    printf("======================================================= iteration index %d \n", i);
-            //                    printf("EARLY STOPPING ACHIEVED \n");
-            //                    is_early_stop = 1;
-            //                    break;
-            //                }
-            //                update_weights(ffn, i);
-            //                // reset minibatch index
-            //                minibach_index = 0;
-            //            }
-            //            if (ffn.num_records > ffn.minibatch_size) {
-            //                minibach_index++;
-            //            }
+
+            if (verbose == 0) {
+                printf("======================================================= iteration index %d \n", i);
+                printf("======================================================= record index %d \n", record_index);
+                printf("target output \n");
+                print_matrix_double(target_Y[record_index], rnn.batch_size, rnn.n_out_neurons);
+                printf("network output \n");
+                print_matrix_double_3d(rnn.layers[rnn.n_h_layers + 1].layer_sequence_outputs, rnn.batch_size, rnn.n_out_neurons, rnn.input_dims[1]);
+            }
+#
+             update_weights_rnn(rnn, i);
+            if (minibach_index != 0 && (minibach_index % rnn.minibatch_size == 0)) {
+                printf("*********************************errors ***********************\n\n");
+                print_matrix_double(rnn.errors, rnn.n_out_neurons, rnn.input_dims[1]);
+                printf("*********************************errors ***********************\n\n");
+
+                if (check_early_stopping(rnn) == 1) {
+                    printf("======================================================= iteration index %d \n", i);
+                    printf("EARLY STOPPING ACHIEVED \n");
+                    is_early_stop = 1;
+                    break;
+                }
+               
+                // reset minibatch index
+                minibach_index = 0;
+            }
+            if (rnn.num_records > rnn.minibatch_size) {
+                minibach_index++;
+            }
         }
 
         // if number of records are smaller than batchsize than update weights after records iterations
-        if (ffn.num_records < ffn.minibatch_size) {
-            //            if (verbose == 0) {
-            //                printf("*********************************errors ***********************\n");
-            //                print_matrix_double(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
-            //                printf("*********************************errors ***********************\n\n");
-            //            }
-            //
+        if (rnn.num_records < rnn.minibatch_size) {
             //            if (check_early_stopping(ffn) == 1 && (i != num_iterations - 1)) {
             //                printf("======================================================= iteration index %d \n", i);
             //                printf("EARLY STOPPING ACHIEVED \n");
@@ -458,7 +447,7 @@ network fit_rnn(network ffn, double ***data_X, double ***target_Y, int num_itera
             //
             //                break;
             //            }
-            //            update_weights(ffn, i);
+          //  update_weights_rnn(rnn, i);
         }
     }
 }
