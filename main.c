@@ -183,20 +183,20 @@ void test_rrn_network() {
     int input_c = n_features;
 
     int n_h_layers = 3;
-    int n_h_neurons = 100;
+    int n_h_neurons = 120;
     int n_out_neurons = 4;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.0000006;
-    int num_iterations = 24000;
-    int training_mode = 0;
+    double learning_rate = 0.00000006;
+    int num_iterations = 150000;
+    int training_mode = 2;
 
     // one-dimensional training and target dataset 
     double ***data_X = get_input_matrix_rnn(n_batches, batch_size, n_features);
     double ***target_Y = get_target_matrix_rnn(n_batches, batch_size, n_out_neurons);
-    double bottleneck_value = 5;
+    double bottleneck_value = 2;
 
     set_verbose(1);
     printf("start");

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include "layer.h"
-#include "network.h"
+#include "../network_types/network.h"
 #include "recurrent_network.h"
 #include "../utils/weight_initializer.h"
 #include "../utils/verbose.h"
@@ -102,8 +102,10 @@ struct layer* init_rnn_layers(
         hidden_layer->layer_sequence_outputs = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->bias = build_array(hidden_layer->num_outputs, 1);
         hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
+        hidden_layer->gradients_prev = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_B = build_array(hidden_layer->num_outputs, 1);
         hidden_layer->gradients_W = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->gradients_W_prev = build_array(hidden_layer->num_outputs, hidden_layer->num_outputs);
         hidden_layer->activation_type = activation;
 
         hidden_layer->previous_layer = &layers[i - 1];
@@ -135,6 +137,7 @@ struct layer* init_rnn_layers(
     output_layer->layer_sequence_outputs = build_array_3d(batch_size, output_layer->num_outputs, input_dims[1]);
     output_layer->bias = build_array(output_layer->num_outputs, 1);
     output_layer->gradients = build_array(output_layer->num_outputs, input_dims[1]);
+    output_layer->gradients_prev = build_array(output_layer->num_outputs, input_dims[1]);
     output_layer->gradients_B = build_array(output_layer->num_outputs, 1);
     output_layer->gradients_W = build_array(output_layer->num_outputs, output_layer->num_inputs);
 
@@ -198,20 +201,22 @@ network init_rnn(
     return rnn;
 }
 
-void forward_rnn(network rnn, double **data_X) {
+network* forward_rnn(network *rnn, double **data_X) {
     int d;
-    for (d = 0; d < rnn.batch_size; d++) {
-        forward_sequence(rnn, data_X, d);
+    for (d = 0; d < rnn->batch_size; d++) {
+        rnn = forward_sequence(rnn, data_X, d);
     }
+
+    return rnn;
 }
 
-void forward_sequence(network rnn, double **data_X, int d) {
+network* forward_sequence(network *rnn, double **data_X, int d) {
     int l;
     double **layer_input, **outputs;
     layer *_layer, *_prev_layer;
 
-    for (l = 1; l < rnn.n_h_layers + 2; l++) {
-        _layer = &rnn.layers[l];
+    for (l = 1; l < rnn->n_h_layers + 2; l++) {
+        _layer = &rnn->layers[l];
         _prev_layer = _layer->previous_layer;
 
         if (l == 1) {
@@ -223,80 +228,90 @@ void forward_sequence(network rnn, double **data_X, int d) {
             outputs = _layer->outputs;
 
             if (_prev_layer->layer_index == 1) {
-                outputs = apply_matrix_product_transposed(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn.input_dims[1], _layer->num_inputs);
+                outputs = apply_matrix_product_transposed(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn->input_dims[1], _layer->num_inputs);
             } else {
-                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn.input_dims[1], _layer->num_inputs);
+                outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn->input_dims[1], _layer->num_inputs);
             }
 
             if (_layer->layer_sequence_outputs != NULL && _layer->prev_layer_weights != NULL && d > 0) {
-                _layer->layer_sequence_outputs[d] = apply_matrix_product(_layer->layer_sequence_outputs[d], _layer->prev_layer_weights, _layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn.input_dims[1], _layer->num_outputs);
-                outputs = matrix_add_matrix(_layer->layer_sequence_outputs[d], outputs, _layer->num_outputs, rnn.input_dims[1]);
+                // _layer->layer_sequence_outputs[d] = apply_matrix_product(_layer->layer_sequence_outputs[d], _layer->prev_layer_weights, _layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn->input_dims[1], _layer->num_outputs);
+                // outputs = matrix_add_matrix(_layer->layer_sequence_outputs[d], outputs, _layer->num_outputs, rnn->input_dims[1]);
             }
 
-            _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn.input_dims[1]);
-            apply_activation(_layer, rnn);
+            _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn->input_dims[1]);
+            apply_activation(_layer, *rnn);
 
-            _layer->layer_sequence_outputs[d] = copy_array(_layer->layer_sequence_outputs[d], _layer->outputs, _layer->num_outputs, rnn.input_dims[1]);
+            _layer->layer_sequence_outputs[d] = copy_array(_layer->layer_sequence_outputs[d], _layer->outputs, _layer->num_outputs, rnn->input_dims[1]);
         }
     }
+
+
+    return rnn;
 }
 
 // https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 
-void backward_rnn(network rnn, double **data_X, double **target_Y) {
+network* backward_rnn(network *rnn, double **data_X, double **target_Y) {
     int d;
-    
-    for (d = 0; d < rnn.batch_size; d++) {
-        backward_sequence(rnn, data_X, target_Y, d);
+
+    for (d = 0; d < rnn->batch_size; d++) {
+        rnn = backward_sequence(rnn, data_X, target_Y, d);
     }
+
+    return rnn;
 }
 
-void backward_sequence(network rnn, double **data_X, double **target_Y, int d) {
+network* backward_sequence(network *rnn, double **data_X, double **target_Y, int d) {
     int l;
     layer *_layer;
 
     // calculate gradients
-    for (l = rnn.n_h_layers + 1; l > 0; l--) {
-        _layer = &rnn.layers[l];
+    for (l = rnn->n_h_layers + 1; l > 0; l--) {
+        _layer = &rnn->layers[l];
 
-        if (l == (rnn.n_h_layers + 1)) {
-            rnn.errors = get_errors_rnn(rnn, _layer->layer_sequence_outputs[d], target_Y, _layer->num_outputs, d);
+        if (l == (rnn->n_h_layers + 1)) {
+            rnn = get_errors_rnn(rnn, _layer->layer_sequence_outputs[d], target_Y, _layer->num_outputs, d);
         }
 
-        _layer->gradients = calculate_jacobi_matrix_rnn(&rnn, _layer, target_Y, data_X, d);
+        rnn = calculate_jacobi_matrix_rnn(rnn, _layer, target_Y, data_X, d);
     }
+
+    return rnn;
 }
 
-double **get_errors_rnn(network ffn, double **output, double **target_Y, int n_row, int d) {
+network* get_errors_rnn(network *ffn, double **output, double **target_Y, int n_row, int d) {
     int i, j;
-    int normalizing_constant = ffn.minibatch_size;
+    int normalizing_constant = ffn->minibatch_size;
 
-    if (ffn.num_records < ffn.minibatch_size) {
-        normalizing_constant = ffn.num_records;
+    if (ffn->num_records < ffn->minibatch_size) {
+        normalizing_constant = ffn->num_records;
     }
 
     for (i = 0; i < n_row; i++) {
-        switch (ffn.loss_function) {
+        switch (ffn->loss_function) {
             case MEAN_SQUARED_ERROR_LOSS:
-                ffn.errors[i][0] += pow((target_Y[d][i] - output[i][0]), 2.0) / (double) normalizing_constant;
+                ffn->errors[i][0] += pow((target_Y[d][i] - output[i][0]), 2.0) / (double) normalizing_constant;
                 break;
         }
     }
 
-    return ffn.errors;
+    return ffn;
 }
 
-double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X, int s) {
-    int i, j, k, n;
+network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targetY, double **data_X, int s) {
+    int i, j, k, n, p;
     int n_row = _layer->num_outputs;
     int d = ffn->input_dims[1];
     layer *_next_layer = _layer->next_layer;
     layer *_prev_layer = _layer->previous_layer;
     double derivative;
+    double gradient_log;
+    int is_clipping_complete = 0;
 
     for (i = 0; i < n_row; i++) {
         for (k = 0; k < d; k++) {
-            derivative = apply_deactivation_to_value(_layer, i, k, *ffn);
+            derivative = apply_deactivation_to_value_rnn(_layer, i, k, s, *ffn);
+            _layer->gradients[i][k] = 0;
 
             if (_layer->layer_index == (ffn->n_h_layers + 2)) {
                 _layer->gradients[i][k] += -2.0 * (targetY[s][i] - _layer->layer_sequence_outputs[s][i][k]) * derivative;
@@ -305,6 +320,27 @@ double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
                     _layer->gradients[i][k] += _next_layer->gradients[n][k] * _next_layer->weights[n][i] * derivative;
                 }
             }
+
+            // gradient clipping
+            //            if (abs(_layer->gradients[i][k]) > 0.7) {
+            //                gradient_log = log(abs(_layer->gradients[i][k]));
+            //
+            //                if (gradient_log > 1.0) {
+            //                    if (is_clipping_complete == 0) {
+            //                        ffn->learning_rate *= (1.0 / gradient_log);
+            //                    }
+            //
+            //                    // _layer->gradients[i][k] = _layer->gradients[i][k] / gradient_log ;
+            //                } else {
+            //                    // _layer->gradients[i][k] = gradient_log;
+            //
+            //                    if (is_clipping_complete == 0) {
+            //                        ffn->learning_rate *= gradient_log;
+            //                    }
+            //                }
+            //
+            //                is_clipping_complete = 1;
+            //            }
 
             _layer->gradients_B[i][0] += _layer->gradients[i][k];
 
@@ -315,38 +351,53 @@ double **calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
                     _layer->gradients_W[i][j] += _layer->gradients[i][k] * _prev_layer->layer_sequence_outputs[s][j][k];
                 }
             }
+
+            if (_layer->gradients_W_prev != NULL && s > 1 && _layer->layer_index != ffn->n_h_layers + 2) {
+                for (p = 0; p < _layer->num_outputs; p++) {
+                     _layer->gradients_W_prev[i][p] += (_layer->gradients_prev[i][0]) * _layer->layer_sequence_outputs[s - 1][i][0];
+                }
+            }
         }
     }
 
-    return _layer->gradients;
+    return ffn;
 }
 
-void update_weights_rnn(network ffn, int i_iteration) {
+network* update_weights_rnn(network *ffn, int i_iteration) {
     int i, j, r, l, k;
-    int normalizing_constant = ffn.minibatch_size;
+    int normalizing_constant = ffn->minibatch_size;
     double p = 0.9999, pf = 0.9;
     double t = (double) i_iteration + 1;
     double prev_weight, prev_bias;
     double beta = 0.2;
+    double lr = ffn->learning_rate *= 0.999;
     layer *_layer;
 
-    if (ffn.num_records < ffn.minibatch_size) {
-        normalizing_constant = ffn.num_records;
+    if (ffn->num_records < ffn->minibatch_size) {
+        normalizing_constant = ffn->num_records;
     }
 
-    for (l = ffn.n_h_layers + 1; l >= 1; l--) {
-        _layer = &ffn.layers[l];
+    printf("learning rate: %f \n\n\n", ffn->learning_rate);
+
+    for (l = ffn->n_h_layers + 1; l >= 1; l--) {
+        _layer = &ffn->layers[l];
 
         for (j = 0; j < _layer->num_outputs; j++) {
+
+            if (_layer->layer_index >= 2 && _layer->prev_layer_weights != NULL) {
+                for (k = 0; k < _layer->num_outputs; k++) {
+                    _layer->prev_layer_weights[j][k] -= (lr * _layer->gradients_W_prev[j][k]) / (double) normalizing_constant;
+                }
+            }
+
             for (i = 0; i < _layer->num_inputs; i++) {
                 prev_weight = _layer->weights[j][i];
-                switch (ffn.optimizer) {
+                switch (ffn->optimizer) {
                     case DEFAULT:
-                        _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
-                        ffn.learning_rate *= 0.999;
+                        _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / (double) normalizing_constant;
                         break;
                     default:
-                        _layer->weights[j][i] -= ffn.learning_rate * _layer->gradients_W[j][i] / (double) normalizing_constant;
+                        _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / (double) normalizing_constant;
                         break;
                 }
 
@@ -355,22 +406,29 @@ void update_weights_rnn(network ffn, int i_iteration) {
 
             prev_bias = _layer->bias[j][0];
 
-            switch (ffn.optimizer) {
+            switch (ffn->optimizer) {
                 case DEFAULT:
-                    _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
+                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / (double) normalizing_constant;
                     break;
                 default:
-                    _layer->bias[j][0] -= ffn.learning_rate * _layer->gradients_B[j][0] / (double) normalizing_constant;
+                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / (double) normalizing_constant;
                     break;
             }
 
+            lr *= 0.999;
             // _layer->bias[j][0] = beta * prev_bias + (1.0 - beta) * _layer->bias[j][0];
         }
 
-        clear_array(_layer->gradients, _layer->num_outputs, ffn.input_dims[1]);
+        clear_array(_layer->gradients, _layer->num_outputs, ffn->input_dims[1]);
+        clear_array(_layer->gradients_prev, _layer->num_outputs, ffn->input_dims[1]);
         clear_array(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
-        clear_array(ffn.errors, ffn.n_out_neurons, ffn.input_dims[1]);
+
+        clear_array(ffn->errors, ffn->n_out_neurons, ffn->input_dims[1]);
         clear_array(_layer->gradients_B, _layer->num_outputs, 1);
+
+        if (_layer->gradients_W_prev != NULL) {
+            clear_array(_layer->gradients_W_prev, _layer->num_outputs, _layer->num_outputs);
+        }
     }
 
     if (verbose == 1) {
@@ -379,6 +437,8 @@ void update_weights_rnn(network ffn, int i_iteration) {
         printf("weight are updated \n");
         printf("***********************************************************************\n\n");
     }
+
+    return ffn;
 }
 
 network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_iterations, int training_mode) {
@@ -394,19 +454,21 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
         }
 
         for (record_index = 0; record_index < rnn.num_records && is_early_stop == 0; record_index++) {
-            forward_rnn(rnn, data_X[record_index]);
-            backward_rnn(rnn, data_X[record_index], target_Y[record_index]);
+            rnn = *forward_rnn(&rnn, data_X[record_index]);
+            rnn = *backward_rnn(&rnn, data_X[record_index], target_Y[record_index]);
 
-            //            if (i % 100 == 0 && record_index == ffn.num_records - 1) {
-            //                // check the correctness of gradient on the first iteration
-            //                check_gradient(&ffn, data_X[record_index], target_Y[record_index]);
-            //
-            //                if (ffn.is_gradient_checked == 0) {
-            //                    printf("Gradient is wrong. Break the training.\n");
-            //                    is_early_stop = 1;
-            //                    break;
-            //                }
-            //            }
+
+
+            if (i % 100 == 0 && record_index == rnn.num_records - 1) {
+                // check the correctness of gradient on the first iteration
+                check_gradient_rnn(&rnn, data_X[record_index], target_Y[record_index]);
+
+                if (rnn.is_gradient_checked == 0) {
+                    printf("Gradient is wrong. Break the training.\n");
+                    is_early_stop = 1;
+                    break;
+                }
+            }
 
             if (verbose == 0) {
                 printf("======================================================= iteration index %d \n", i);
@@ -416,8 +478,7 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
                 printf("network output \n");
                 print_matrix_double_3d(rnn.layers[rnn.n_h_layers + 1].layer_sequence_outputs, rnn.batch_size, rnn.n_out_neurons, rnn.input_dims[1]);
             }
-#
-             update_weights_rnn(rnn, i);
+
             if (minibach_index != 0 && (minibach_index % rnn.minibatch_size == 0)) {
                 printf("*********************************errors ***********************\n\n");
                 print_matrix_double(rnn.errors, rnn.n_out_neurons, rnn.input_dims[1]);
@@ -429,7 +490,9 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
                     is_early_stop = 1;
                     break;
                 }
-               
+
+
+                rnn = *update_weights_rnn(&rnn, i);
                 // reset minibatch index
                 minibach_index = 0;
             }
@@ -440,14 +503,169 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
 
         // if number of records are smaller than batchsize than update weights after records iterations
         if (rnn.num_records < rnn.minibatch_size) {
-            //            if (check_early_stopping(ffn) == 1 && (i != num_iterations - 1)) {
-            //                printf("======================================================= iteration index %d \n", i);
-            //                printf("EARLY STOPPING ACHIEVED \n");
-            //                is_early_stop = 1;
-            //
-            //                break;
-            //            }
-          //  update_weights_rnn(rnn, i);
+            if (check_early_stopping(rnn) == 1 && (i != num_iterations - 1)) {
+                printf("======================================================= iteration index %d \n", i);
+                printf("EARLY STOPPING ACHIEVED \n");
+                is_early_stop = 1;
+
+                break;
+            }
+            rnn = *update_weights_rnn(&rnn, i);
         }
     }
+}
+
+network* check_gradient_rnn(network *rnn, double **data_X, double **target_Y) {
+    if (rnn->is_gradient_checked == 1) {
+        return rnn;
+    }
+    // print_network(ffn);
+    rnn->is_gradient_checked = 1;
+
+    update_weights_rnn(rnn, 2);
+
+    forward_rnn(rnn, data_X);
+    backward_rnn(rnn, data_X, target_Y);
+
+    int i, j, b;
+    layer _first_h_layer = rnn->layers[1];
+    layer _output_layer = rnn->layers[rnn->n_h_layers + 1];
+    double ***original_outputs = build_array_3d(rnn->batch_size, rnn->n_out_neurons, rnn->input_dims[1]);
+
+    double ***outputs = _output_layer.layer_sequence_outputs;
+    double output_y1;
+    double calculated_derivative_bias;
+    double delta_x = 0.00000001;
+    double tolerated_error = 0.001;
+
+    double output_y2;
+    double calculated_derivative;
+    double derivative;
+
+    for (b = 0; b < rnn->batch_size; b++) {
+        for (j = 0; j < rnn->n_out_neurons; j++) {
+            for (i = 0; i < rnn->input_dims[1]; i++) {
+                original_outputs[b][j][i] = outputs[b][j][i];
+            }
+        }
+    }
+
+    printf("\n----------------------------------------- gradient check start--------------- \n\n\n");
+
+    // test 1: output layer
+    _output_layer.weights[0][0] += delta_x;
+    forward_rnn(rnn, data_X);
+
+    outputs = _output_layer.layer_sequence_outputs;
+    derivative = 0;
+
+    for (b = 0; b < rnn->batch_size; b++) {
+        output_y1 = original_outputs[b][0][0];
+        output_y2 = outputs[b][0][0];
+
+        printf("orginal outputs : %f\n", output_y1);
+        printf("similated outputs : %f\n", output_y2);
+        printf("target outputs : %f\n", target_Y[b][0]);
+
+        derivative += ((pow((target_Y[b][0] - output_y2), 2.0) - pow((target_Y[b][0] - output_y1), 2.0)) / delta_x);
+
+        printf("simulated derivative : %f\n", derivative);
+    }
+
+    calculated_derivative = _output_layer.gradients_W[0][0];
+    printf("approximated derivative of the first weight of output layer %f\n", derivative);
+    printf("calculated derivative of first weight of output layer %f\n", calculated_derivative);
+
+    if (fabs(fabs(derivative) - fabs(calculated_derivative)) < tolerated_error) {
+        printf("\n\n\nderivative of the output layer is correct \n\n\n");
+    } else {
+        printf("GRADIENT IS NOT CORRECT\n");
+        rnn->is_gradient_checked = 0;
+    }
+
+    _output_layer.weights[0][0] -= delta_x;
+
+    // test 2: first hidden layer
+    _first_h_layer.weights[0][0] += delta_x;
+    forward_rnn(rnn, data_X);
+
+    derivative = 0.0;
+    outputs = _output_layer.layer_sequence_outputs;
+
+    for (b = 0; b < rnn->batch_size; b++) {
+        for (j = 0; j < _output_layer.num_outputs; j++) {
+            for (i = 0; i < rnn->input_dims[1]; i++) {
+                output_y2 = outputs[b][j][i];
+                derivative += ((pow((target_Y[b][j] - output_y2), 2.0) - pow((target_Y[b][j] - original_outputs[b][j][i]), 2.0)) / delta_x);
+            }
+        }
+    }
+
+    calculated_derivative = _first_h_layer.gradients_W[0][0];
+    printf("approximated derivative of the first weight of first hidden layer %f\n", derivative);
+    printf("calculated derivative of first weight of hidden layer %f\n", calculated_derivative);
+
+    if (fabs(fabs(derivative) - fabs(calculated_derivative)) < tolerated_error) {
+        printf("\n\n\nderivative of the hidden layer is correct \n\n\n");
+    } else {
+        printf("GRADIENT IS NOT CORRECT\n");
+        rnn->is_gradient_checked = 0;
+    }
+
+    _first_h_layer.weights[0][0] -= delta_x;
+
+    // test 3: last weight of hidden layer
+    _first_h_layer.weights[_first_h_layer.num_outputs - 1][_first_h_layer.num_inputs - 1] += delta_x;
+    forward_rnn(rnn, data_X);
+
+    derivative = 0.0;
+    outputs = _output_layer.layer_sequence_outputs;
+
+    for (b = 0; b < rnn->batch_size; b++) {
+        for (j = 0; j < _output_layer.num_outputs; j++) {
+            for (i = 0; i < rnn->input_dims[1]; i++) {
+                output_y2 = outputs[b][j][i];
+                derivative += ((pow((target_Y[b][j] - output_y2), 2.0) - pow((target_Y[b][j] - original_outputs[b][j][i]), 2.0)) / delta_x);
+            }
+        }
+    }
+
+    calculated_derivative = _first_h_layer.gradients_W[_first_h_layer.num_outputs - 1][_first_h_layer.num_inputs - 1];
+    printf("approximated derivative of the last weight of first hidden layer %f\n", derivative);
+    printf("calculated derivative of last weight of hidden layer %f\n", calculated_derivative);
+
+    if (fabs(fabs(derivative) - fabs(calculated_derivative)) < tolerated_error) {
+        printf("\n\n\nderivative of the hidden layer is correct \n\n\n");
+    } else {
+        printf("GRADIENT IS NOT CORRECT\n");
+        rnn->is_gradient_checked = 0;
+    }
+
+    _first_h_layer.weights[_first_h_layer.num_outputs - 1][_first_h_layer.num_inputs - 1] -= delta_x;
+
+    // test 4: gradient of bias in output layer    
+    _output_layer.bias[_output_layer.num_outputs - 1][0] += delta_x;
+    forward_rnn(rnn, data_X);
+
+    outputs = _output_layer.layer_sequence_outputs;
+    derivative = 0;
+
+    for (b = 0; b < rnn->batch_size; b++) {
+        output_y2 = outputs[b][_output_layer.num_outputs - 1][0];
+        output_y1 = original_outputs[b][_output_layer.num_outputs - 1][0];
+        derivative += ((pow((target_Y[b][_output_layer.num_outputs - 1] - output_y2), 2.0) - pow((target_Y[b][_output_layer.num_outputs - 1] - output_y1), 2.0)) / delta_x);
+    }
+
+    calculated_derivative_bias = _output_layer.gradients_B[_output_layer.num_outputs - 1][0];
+    printf("approximated bias derivative of the first weight of output layer %f\n", derivative);
+    printf("bias calculated derivative of first weight of output layer %f\n", calculated_derivative_bias);
+
+    if (fabs(fabs(derivative) - fabs(calculated_derivative_bias)) < tolerated_error) {
+        printf("\n\n\nbias derivative of the output layer is correct \n\n\n");
+    } else {
+        printf("BIAS GRADIENT IS NOT CORRECT\n");
+        rnn->is_gradient_checked = 0;
+    }
+
+    _output_layer.bias[_output_layer.num_outputs - 1][0] -= delta_x;
 }

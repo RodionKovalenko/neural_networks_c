@@ -36,6 +36,7 @@ extern "C" {
     double **apply_activation(layer *_layer, network ffn);
     double **apply_deactivation(layer *_layer, network ffn);
     double apply_deactivation_to_value(layer *_layer, int row, int column, network ffn);
+    double apply_deactivation_to_value_rnn(layer *_layer, int row, int column, int s, network ffn);
 
 #ifdef __cplusplus
 }

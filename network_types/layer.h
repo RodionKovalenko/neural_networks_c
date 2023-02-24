@@ -27,11 +27,12 @@ extern "C" {
         double **errors;
         double **bias;
         double **gradients;
+        double **gradients_prev;
         double **gradients_B;
         double **adam_A_bias;
         double **adam_B_bias;
         double **gradients_W;
-        double **prev_gradients;
+        double **gradients_W_prev;
         double **adam_A;
         double **adam_B;
         struct layer *previous_layer;
