@@ -36,25 +36,24 @@ extern "C" {
     double** sigmoid_to_matrix(double **matrix, int row, int col);
     double sigmoid_derivate_to_value(double value);
     double** sigmoid_derivative(double **matrix, int row, int col);
-    
+
     double **softmax_to_matrix(double **matrix, int row, int col);
     double **softmax_derivate_to_matrix(double **matrix, int row, int col);
     double softmax_derivate_to_value(double **matrix, int row_i, int col_j);
-    
+
     double** tanh_to_matrix(double **matrix, int row, int col);
     double tanh_derivative_to_value(double value);
-    
+
     double** relu_to_matrix(double **matrix, int row, int col);
     double relu_derivative_to_value(double value);
-    
+
     double** leaky_relu_to_matrix(double **matrix, int row, int col);
     double leaky_relu_derivative_to_value(double value);
-    
+
     double** multiply_two_to_matrix(double **matrix, int row, int col);
     double multiply_two_derivative_to_value(double value);
-    
-    double** copy_array(double **matrix1, double **matrix2, int row, int col);
 
+    double** copy_array(double **matrix1, double **matrix2, int row, int col);
 
 
 #ifdef __cplusplus

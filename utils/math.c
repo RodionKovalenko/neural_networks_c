@@ -30,12 +30,13 @@ double** matrix_product(double **matrix1, double **matrix2, int row, int col, in
 
 double** copy_array(double **matrix1, double **matrix2, int row, int col) {
     int i, j;
-
+    
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
             matrix1[i][j] = matrix2[i][j];
         }
     }
+
     return matrix1;
 }
 
@@ -96,11 +97,11 @@ double** matrix_add_vector(double **matrix_1, double *vec, int row, int col) {
  * @return 
  */
 double** matrix_add_matrix(double **matrix_1, double **matrix_2, int row, int col) {
-    int i, j;
-
+     int i, j;
+    
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
-            matrix_1[i][j] += matrix_2[i][j];
+            matrix_1[i][j] = (matrix_1[i][j] + matrix_2[i][j]);
         }
     }
 
@@ -312,7 +313,7 @@ double** leaky_relu_to_matrix(double **matrix, int row, int col) {
 
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
-            if (matrix[i][j] < 0) {
+            if (matrix[i][j] < 0.0) {
                 matrix[i][j] *= 0.01;
             }
         }
