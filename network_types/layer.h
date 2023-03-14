@@ -20,7 +20,7 @@ extern "C" {
 
     typedef struct layer {
         double **weights;
-        double **prev_layer_weights;
+        double **recurrent_weights;
         // layer output in 2_d: [record_index][input_dimension]
         double **outputs;
         double ***hidden_output_seq;
@@ -28,12 +28,13 @@ extern "C" {
         double **errors;
         double **bias;
         double **gradients;
-        double **gradients_prev;
+         double **gradients_h_recurrent;
+        double **gradients_recurrent;
         double **gradients_B;
         double **adam_A_bias;
         double **adam_B_bias;
         double **gradients_W;
-        double **gradients_W_prev;
+        double **gradients_W_recurrent;
         double **adam_A;
         double **adam_B;
         struct layer *previous_layer;

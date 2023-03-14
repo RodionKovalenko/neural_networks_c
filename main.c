@@ -173,9 +173,9 @@ void testnetwork() {
 void test_rrn_network() {
     // number of data records
     int input_num_records;
-    int n_batches = 7;
-    int batch_size = 4;
-    int n_features = 5;
+    int n_batches = 30;
+    int batch_size = 5;
+    int n_features = 10;
 
     input_num_records = n_batches;
 
@@ -183,21 +183,21 @@ void test_rrn_network() {
     int input_r = 1;
     int input_c = n_features;
 
-    int n_h_layers = 1;
+    int n_h_layers = 3;
     int n_h_neurons = 100;
-    int n_out_neurons = 2;
+    int n_out_neurons = 4;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.000000006;
-    int num_iterations = 20000;
+    double learning_rate = 0.0000000006;
+    int num_iterations = 30000;
     int training_mode = 2;
 
     // one-dimensional training and target dataset 
     double ***data_X = get_input_matrix_rnn(n_batches, batch_size, n_features);
     double ***target_Y = get_target_matrix_rnn(n_batches, batch_size, n_out_neurons);
-    double bottleneck_value = 0;
+    double bottleneck_value = 5;
 
     set_verbose(1);
     printf("start");
@@ -219,7 +219,7 @@ void test_rrn_network() {
             n_h_neurons,
             n_out_neurons,
             learning_rate,
-            MULTIPLY_TWO,
+            LEAKY_RELU,
             bottleneck_value,
             batch_size
             );
@@ -233,12 +233,12 @@ void test_rrn_network() {
 //    rnn.layers[1].bias[0][0] = 0;
 //    rnn.layers[2].bias[0][0] = 0;
 //    rnn.layers[1].weights[0][0] = 0.3;
-//    rnn.layers[1].prev_layer_weights[0][0] = 0.7;
+//    rnn.layers[1].recurrent_layer_weights[0][0] = 0.7;
 //    rnn.layers[2].weights[0][0] = 0.2;
 //    rnn.layers[2].weights[1][0] = 0.8;
 
-    //    print_matrix_double_3d(data_X, n_batches, batch_size, n_features);
-    //    print_matrix_double_3d(target_Y, n_batches, batch_size, n_out_neurons);
+    print_matrix_double_3d(data_X, n_batches, batch_size, n_features);
+    print_matrix_double_3d(target_Y, n_batches, batch_size, n_out_neurons);
 
     fit_rnn(rnn, data_X, target_Y, num_iterations, training_mode);
 
