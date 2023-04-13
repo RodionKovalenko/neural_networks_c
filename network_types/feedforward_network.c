@@ -466,15 +466,12 @@ network fit(network ffn, double **data_X, double **target_Y, int num_iterations,
 int check_early_stopping(network ffn) {
     int i, j;
 
-    int can_be_stopped = 0;
+    int can_be_stopped = 1;
 
     for (i = 0; i < ffn.n_out_neurons; i++) {
         for (j = 0; j < ffn.input_dims[1]; j++) {
-            if (ffn.errors[i][j] < 0.0001) {
-                can_be_stopped = 1;
-            } else {
-
-                can_be_stopped = 0;
+            if (ffn.errors[i][j] > 0.0001) {
+                 can_be_stopped = 0;
             }
         }
     }

@@ -102,12 +102,25 @@ struct layer* init_rnn_layers(
         hidden_layer->layer_sequence_outputs = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->hidden_output_seq = build_array_3d(batch_size, hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->bias = build_array(hidden_layer->num_outputs, 1);
+
+
         hidden_layer->gradients = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_recurrent = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_h_recurrent = build_array(hidden_layer->num_outputs, input_dims[1]);
         hidden_layer->gradients_B = build_array(hidden_layer->num_outputs, 1);
         hidden_layer->gradients_W = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
         hidden_layer->gradients_W_recurrent = build_array(hidden_layer->num_outputs, hidden_layer->num_outputs);
+
+        hidden_layer->prev_weights = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->prev_gradients_W = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->prev_recurrent_weights = build_array(hidden_layer->num_outputs, hidden_layer->num_outputs);
+        hidden_layer->v_t = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->q_t = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+        hidden_layer->I = build_array(hidden_layer->num_outputs, hidden_layer->num_outputs);
+        hidden_layer->I = init_identity_matrix(hidden_layer->I, hidden_layer->num_outputs);
+        hidden_layer->G_t_next = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
+        hidden_layer->gradient_W_Hessian = build_array(hidden_layer->num_outputs, hidden_layer->num_inputs);
+
         hidden_layer->activation_type = activation;
 
         hidden_layer->previous_layer = &layers[i - 1];
@@ -143,6 +156,16 @@ struct layer* init_rnn_layers(
     output_layer->gradients_recurrent = build_array(output_layer->num_outputs, input_dims[1]);
     output_layer->gradients_B = build_array(output_layer->num_outputs, 1);
     output_layer->gradients_W = build_array(output_layer->num_outputs, output_layer->num_inputs);
+
+    output_layer->prev_weights = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->prev_gradients_W = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->prev_recurrent_weights = build_array(output_layer->num_outputs, output_layer->num_outputs);
+    output_layer->v_t = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->q_t = build_array(output_layer->num_outputs, output_layer->num_inputs);
+    output_layer->I = build_array(output_layer->num_outputs, output_layer->num_outputs);
+    output_layer->I = init_identity_matrix(output_layer->I, output_layer->num_outputs);
+    output_layer->G_t_next = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
+    output_layer->gradient_W_Hessian = build_array(output_layer->num_outputs, output_layer->num_inputs);
 
     output_layer->adam_A = build_array(output_layer->num_outputs, output_layer->num_inputs);
     output_layer->adam_B = build_array(output_layer->num_outputs, output_layer->num_inputs);
@@ -242,37 +265,16 @@ network* forward_sequence(network *rnn, double **data_X, int d) {
                 outputs = apply_matrix_product(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn->input_dims[1], _layer->num_inputs);
             }
 
-            //            printf("raw output sequence before adding \n");
-            //            print_matrix_double(outputs, _layer->num_outputs, rnn->input_dims[1]);
-            //            printf("end of array \n");
-
             if (_layer->layer_sequence_outputs != NULL && _layer->recurrent_weights != NULL && d > 0 && (_layer->layer_index != rnn->n_h_layers + 2)) {
-                //                printf("layer prev sequence_outputs prev before adding \n");
-                //                print_matrix_double(_layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn->input_dims[1]);
-                //                printf("end of array \n");
-
                 _layer->hidden_output_seq[d] = apply_matrix_product(_layer->hidden_output_seq[d], _layer->recurrent_weights, _layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn->input_dims[1], _layer->num_outputs);
-                _layer->hidden_output_seq[d] = matrix_add_matrix(_layer->hidden_output_seq[d], outputs, _layer->num_outputs, rnn->input_dims[1]);
-                outputs = copy_array(outputs, _layer->hidden_output_seq[d], _layer->num_outputs, rnn->input_dims[1]);
+                outputs = matrix_add_matrix(_layer->hidden_output_seq[d], outputs, _layer->num_outputs, rnn->input_dims[1]);
             }
 
-            //            printf("layer outputs mit recurrent \n");
-            //            print_matrix_double(outputs, _layer->num_outputs, rnn->input_dims[1]);
-            //            printf("end of array \n");
-
             _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn->input_dims[1]);
+
             apply_activation(_layer, *rnn);
 
-            //            printf("layer outputs after activation \n");
-            //            print_matrix_double(_layer->outputs, _layer->num_outputs, rnn->input_dims[1]);
-            //            printf("end of array \n");
-
             _layer->layer_sequence_outputs[d] = copy_array(_layer->layer_sequence_outputs[d], _layer->outputs, _layer->num_outputs, rnn->input_dims[1]);
-
-            //            printf("layer outputs layer_sequence_outputs after activation \n");
-            //            print_matrix_double(_layer->layer_sequence_outputs[d], _layer->num_outputs, rnn->input_dims[1]);
-            //            printf("end of array \n\n\n \n\n\n");
-
         }
     }
 
@@ -320,7 +322,6 @@ network* get_errors_rnn(network *ffn, double **output, double **target_Y, int n_
     for (i = 0; i < n_row; i++) {
         switch (ffn->loss_function) {
             case MEAN_SQUARED_ERROR_LOSS:
-                // printf("target %f, seq %d \n\n\n\n\n\n\n", target_Y[d][i], d);
                 ffn->errors[i][0] += pow((target_Y[d][i] - output[i][0]), 2.0) / (double) normalizing_constant;
                 break;
         }
@@ -336,14 +337,12 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
     layer *_next_layer = _layer->next_layer;
     layer *_prev_layer = _layer->previous_layer;
     double derivative;
-    double prev_grad;
-    double gradient_log;
-    int is_clipping_complete = 0;
+    double normalizing_c;
+    int n_row_flattened = _layer->num_outputs * _layer->num_inputs;
 
     for (i = 0; i < n_row; i++) {
         for (k = 0; k < d; k++) {
             derivative = apply_deactivation_to_value_rnn(_layer, i, k, s, *ffn);
-            prev_grad = _layer->gradients[i][k];
             _layer->gradients[i][k] = 0;
 
             if (_layer->layer_index == (ffn->n_h_layers + 2)) {
@@ -353,27 +352,6 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
                     _layer->gradients[i][k] += _next_layer->gradients[n][k] * _next_layer->weights[n][i] * derivative;
                 }
             }
-
-            // gradient clipping
-            //            if (abs(_layer->gradients[i][k]) > 0.7) {
-            //                gradient_log = log(abs(_layer->gradients[i][k]));
-            //
-            //                if (gradient_log > 1.0) {
-            //                    if (is_clipping_complete == 0) {
-            //                        ffn->learning_rate *= (1.0 / gradient_log);
-            //                    }
-            //
-            //                    // _layer->gradients[i][k] = _layer->gradients[i][k] / gradient_log ;
-            //                } else {
-            //                    // _layer->gradients[i][k] = gradient_log;
-            //
-            //                    if (is_clipping_complete == 0) {
-            //                        ffn->learning_rate *= gradient_log;
-            //                    }
-            //                }
-            //
-            //                is_clipping_complete = 1;
-            //            }
 
             _layer->gradients_B[i][0] += _layer->gradients[i][k];
 
@@ -390,8 +368,20 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
                     _layer->gradients_W_recurrent[i][n] += _layer->layer_sequence_outputs[s - 1][n][k] * _layer->gradients[i][k];
                 }
             }
-
         }
+    }
+
+    if (_layer->prev_weights[0][0] != 0.0 && _layer->prev_gradients_W[0][0] != 0.0) {
+        _layer->q_t = matrix_subtract(_layer->q_t, _layer->weights, _layer->prev_weights, _layer->num_outputs, _layer->num_inputs);
+        _layer->v_t = matrix_subtract(_layer->v_t, _layer->gradients_W, _layer->prev_gradients_W, _layer->num_outputs, _layer->num_inputs);
+
+        normalizing_c = get_normalizing_constant(_layer->q_t, _layer->v_t, _layer->num_outputs, _layer->num_inputs);
+
+        _layer->G_t_next = build_hessian(_layer->G_t_next, _layer->q_t, _layer->num_outputs, _layer->num_inputs);
+        _layer->G_t_next = multiply_scalar(_layer->G_t_next, normalizing_c, n_row_flattened, n_row_flattened);
+        _layer->gradient_W_Hessian = multiply_with_hessian(_layer->gradient_W_Hessian, _layer->G_t_next, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+    } else {
+        _layer->gradient_W_Hessian = copy_array(_layer->gradient_W_Hessian, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
     }
 
     return ffn;
@@ -399,7 +389,7 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
 
 network* update_weights_rnn(network *ffn, int i_iteration) {
     int i, j, r, l, k;
-    int normalizing_constant = ffn->minibatch_size;
+    int normalizing_constant = (double) ffn->minibatch_size;
     double p = 0.9999, pf = 0.9;
     double t = (double) i_iteration + 1;
     double prev_weight, prev_bias;
@@ -408,7 +398,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
     layer *_layer;
 
     if (ffn->num_records < ffn->minibatch_size) {
-        normalizing_constant = ffn->num_records;
+        normalizing_constant = (double) ffn->num_records;
     }
 
     for (l = ffn->n_h_layers + 1; l >= 1; l--) {
@@ -422,15 +412,19 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
                 }
             }
 
-            lr *= 0.999;
             for (i = 0; i < _layer->num_inputs; i++) {
                 prev_weight = _layer->weights[j][i];
+                _layer->prev_gradients_W[j][i] = _layer->gradients_W[j][i];
+                _layer->prev_weights[j][i] = prev_weight;
+
                 switch (ffn->optimizer) {
                     case DEFAULT:
-                        _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / (double) normalizing_constant;
+                        //_layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
+                        _layer->weights[j][i] -= _layer->gradient_W_Hessian[j][i];
+
                         break;
                     default:
-                        _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / (double) normalizing_constant;
+                        // _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
                         break;
                 }
 
@@ -441,10 +435,10 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
 
             switch (ffn->optimizer) {
                 case DEFAULT:
-                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / (double) normalizing_constant;
+                    // _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / normalizing_constant;
                     break;
                 default:
-                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / (double) normalizing_constant;
+                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / normalizing_constant;
                     break;
             }
 
@@ -464,7 +458,6 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
     }
 
     if (verbose == 1) {
-
         printf("***********************************************************************\n");
         printf("weight are updated \n");
         printf("***********************************************************************\n\n");
@@ -486,11 +479,8 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
         }
 
         for (record_index = 0; record_index < rnn.num_records && is_early_stop == 0; record_index++) {
-            rnn = *forward_rnn(&rnn, data_X[record_index]);
-            rnn = *backward_rnn(&rnn, data_X[record_index], target_Y[record_index]);
-
-            if (i % 100 == 0 && record_index == rnn.num_records - 1) {
-                // check the correctness of gradient on the first iteration
+            if (i % 100 == 0) {
+                //check the correctness of gradient on the first iteration
                 check_gradient_rnn(&rnn, data_X[record_index], target_Y[record_index]);
 
                 if (rnn.is_gradient_checked == 0) {
@@ -500,16 +490,19 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
                 }
             }
 
-            if (verbose == 1 || i == num_iterations - 1) {
-                printf("======================================================= iteration index %d \n", i);
-                printf("======================================================= record index %d \n", record_index);
-                printf("target output \n");
-                print_matrix_double(target_Y[record_index], rnn.batch_size, rnn.n_out_neurons);
-                printf("network output \n");
-                print_matrix_double_3d(rnn.layers[rnn.n_h_layers + 1].layer_sequence_outputs, rnn.batch_size, rnn.n_out_neurons, rnn.input_dims[1]);
-            }
+            rnn = *forward_rnn(&rnn, data_X[record_index]);
+            rnn = *backward_rnn(&rnn, data_X[record_index], target_Y[record_index]);
 
-            if (minibach_index != 0 && (minibach_index % rnn.minibatch_size == 0)) {
+            //  if (verbose == 1 || i == num_iterations - 1) {
+            printf("======================================================= iteration index %d \n", i);
+            printf("======================================================= record index %d \n", record_index);
+            printf("target output \n");
+            print_matrix_double(target_Y[record_index], rnn.batch_size, rnn.n_out_neurons);
+            printf("network output \n");
+            print_matrix_double_3d(rnn.layers[rnn.n_h_layers + 1].layer_sequence_outputs, rnn.batch_size, rnn.n_out_neurons, rnn.input_dims[1]);
+            //  }
+
+            if ((minibach_index != 0 && (minibach_index % rnn.minibatch_size == 0)) || rnn.minibatch_size == minibach_index + 1) {
                 printf("*********************************errors ***********************\n\n");
                 print_matrix_double(rnn.errors, rnn.n_out_neurons, rnn.input_dims[1]);
                 printf("*********************************errors ***********************\n\n");
@@ -521,12 +514,12 @@ network fit_rnn(network rnn, double ***data_X, double ***target_Y, int num_itera
                     break;
                 }
 
-
                 rnn = *update_weights_rnn(&rnn, i);
                 // reset minibatch index
                 minibach_index = 0;
             }
-            if (rnn.num_records > rnn.minibatch_size) {
+
+            if (rnn.num_records >= rnn.minibatch_size) {
                 minibach_index++;
             }
         }
@@ -557,7 +550,6 @@ network* check_gradient_rnn(network *rnn, double **data_X, double **target_Y) {
     rnn->is_gradient_checked = 1;
 
     update_weights_rnn(rnn, 2);
-
     forward_rnn(rnn, data_X);
     backward_rnn(rnn, data_X, target_Y);
 
@@ -569,7 +561,7 @@ network* check_gradient_rnn(network *rnn, double **data_X, double **target_Y) {
     double ***outputs = _output_layer.layer_sequence_outputs;
     double output_y1;
     double calculated_derivative_bias;
-    double delta_x = 0.000001;
+    double delta_x = 0.0000001;
     double tolerated_error = 0.001;
 
     double output_y2;

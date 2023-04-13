@@ -22,13 +22,14 @@ extern "C" {
     double** apply_matrix_product_transposed(double **result, double **matrix1, double **matrix2, int row, int col, int col_k);
     double get_random_value();
     double** init_weight_matrix(int weight_r, int weight_c);
-    double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col);
+
+    double** matrix_subtract(double **result_matrix, double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_sum(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_add_vector(double **matrix_1, double *vec, int row, int col);
     double** matrix_add_matrix(double **matrix_1, double **matrix_2, int row, int col);
     double** matrix_add_bias(double **matrix_1, double **vec, int row, int col);
 
-    double** matrix_transpose(double **matrix, int row, int col);
+    double** matrix_transpose(double **result, double **matrix, int row, int col);
     double** hadamard_product(double ** matrix_1, double **matrix_2, int row, int col);
     double** multiply_scalar(double **matrix, double scalar, int row, int col);
 
@@ -54,6 +55,12 @@ extern "C" {
     double multiply_two_derivative_to_value(double value);
 
     double** copy_array(double **matrix1, double **matrix2, int row, int col);
+    double **matrix_flatten(double **matrix_to_apply, double **matrix, int row, int col);
+    double **matrix_unflatten(double **matrix_to_apply, double **matrix, int row, int col);
+    double **init_identity_matrix(double **matrix_to_apply, int row);
+    double get_normalizing_constant(double **matrix1, double **matrix2, int row, int col);
+    double **build_hessian(double **matrix_result, double **matrix1, int n_row, int n_col);
+    double **multiply_with_hessian(double **matrix_result, double **hessian_mat, double **matrix1, int n_row, int n_col);
 
 
 #ifdef __cplusplus

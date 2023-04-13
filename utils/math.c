@@ -30,7 +30,7 @@ double** matrix_product(double **matrix1, double **matrix2, int row, int col, in
 
 double** copy_array(double **matrix1, double **matrix2, int row, int col) {
     int i, j;
-    
+
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
             matrix1[i][j] = matrix2[i][j];
@@ -97,8 +97,8 @@ double** matrix_add_vector(double **matrix_1, double *vec, int row, int col) {
  * @return 
  */
 double** matrix_add_matrix(double **matrix_1, double **matrix_2, int row, int col) {
-     int i, j;
-    
+    int i, j;
+
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
             matrix_1[i][j] = (matrix_1[i][j] + matrix_2[i][j]);
@@ -224,13 +224,8 @@ double **softmax_to_matrix(double **matrix, int row, int col) {
     return matrix;
 }
 
-double** matrix_subtract(double **matrix_1, double **matrix_2, int row, int col) {
+double** matrix_subtract(double **result_matrix, double **matrix_1, double **matrix_2, int row, int col) {
     int i, j;
-
-    double **result_matrix = (double**) malloc(row * sizeof (double));
-
-    for (i = 0; i < row; i++)
-        result_matrix[i] = (double*) malloc(col * sizeof (double));
 
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
@@ -346,20 +341,16 @@ double multiply_two_derivative_to_value(double value) {
     return 2.0;
 }
 
-double** matrix_transpose(double **matrix, int row, int col) {
-    double **matrix_tranposed = (double**) malloc(col * sizeof (double));
+double** matrix_transpose(double **result, double **matrix, int row, int col) {
     int i, j;
-
-    for (i = 0; i < col; i++)
-        matrix_tranposed[i] = (double*) malloc(row * sizeof (double));
 
     for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
-            matrix_tranposed[j][i] = matrix[i][j];
+            result[j][i] = matrix[i][j];
         }
     }
 
-    return matrix_tranposed;
+    return result;
 }
 
 double** hadamard_product(double ** matrix_1, double **matrix_2, int row, int col) {
@@ -425,4 +416,96 @@ double get_standard_deviation(double **matrix, int row, int col) {
     double var = get_variance(matrix, row, col);
 
     return sqrt(var);
+}
+
+double **matrix_flatten(double **matrix_to_apply, double **matrix, int row, int col) {
+    int i, j;
+    int count = 0;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix_to_apply[count][0] = matrix[i][j];
+            count++;
+        }
+    }
+
+    return matrix_to_apply;
+}
+
+double **matrix_unflatten(double **matrix_to_apply, double **matrix, int row, int col) {
+    int i, j;
+    int count = 0;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            matrix_to_apply[i][j] = matrix[count][0];
+            count++;
+        }
+    }
+
+    return matrix_to_apply;
+}
+
+double **init_identity_matrix(double **matrix_to_apply, int row) {
+    int i;
+
+    for (i = 0; i < row; i++) {
+        matrix_to_apply[i][i] = 1.0;
+    }
+
+    return matrix_to_apply;
+}
+
+double get_normalizing_constant(double **matrix1, double **matrix2, int row, int col) {
+    int i, j;
+    double normalizing_constant = 0;
+
+    for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+            normalizing_constant += matrix1[i][j] * matrix2[i][j];
+        }
+    }
+
+    return 1.0 / normalizing_constant;
+}
+
+double **build_hessian(double **matrix_result, double **matrix1, int n_row, int n_col) {
+    int num_dims = n_row * n_col;
+    int i, j, m, p, k, z;
+
+    for (k = 0; k < num_dims; k++) {
+        for (z = k; z < num_dims; z++) {
+            i = (k % n_row);
+            j = (k / n_row);
+            m = (z % n_row);
+            p = (z / n_row);
+
+            matrix_result[k][z] = matrix1[i][j] * matrix1[m][p];
+            // symmetric index has equal values in hessian matrix
+            matrix_result[z][k] = matrix_result[k][z];
+        }
+    }
+
+    return matrix_result;
+}
+
+double **multiply_with_hessian(double **matrix_result, double **hessian_mat, double **matrix1, int n_row, int n_col) {
+    int num_dims = n_row * n_col;
+    int i, j, k, z, m, p;
+
+    for (k = 0; k < num_dims; k++) {
+        i = (k % n_row);
+        j = (k / n_row);
+
+        matrix_result[i][j] = 0;
+
+        for (z = 0; z < num_dims; z++) {
+            m = (z % n_row);
+            p = (z / n_row);
+
+            matrix_result[i][j] += hessian_mat[k][z] * matrix1[m][p];
+        }
+    }
+
+    return matrix_result;
 }
