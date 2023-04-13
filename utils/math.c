@@ -474,9 +474,9 @@ double **build_hessian(double **matrix_result, double **matrix1, double **matrix
     int i, j, m, p, k, z;
 
     for (k = 0; k < num_dims; k++) {
+        i = (k % n_row);
+        j = (k / n_row);
         for (z = k; z < num_dims; z++) {
-            i = (k % n_row);
-            j = (k / n_row);
             m = (z % n_row);
             p = (z / n_row);
 
@@ -503,7 +503,7 @@ double **multiply_with_hessian(double **matrix_result, double **hessian_mat, dou
             m = (z % n_row);
             p = (z / n_row);
 
-            matrix_result[i][j] += hessian_mat[k][z] * matrix1[m][p];
+            matrix_result[i][p] += hessian_mat[k][z] * matrix1[m][p];
         }
     }
 

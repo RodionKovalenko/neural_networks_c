@@ -7,15 +7,8 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/utils/math.h</file>
             <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/main.c</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/network_c.exe.stackdump</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/utils/array.c</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/network_types/network.h</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/utils/verbose.c</file>
             <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/utils/math.c</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/README.md</file>
-            <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/network_types/feedforward_network.c</file>
             <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/network_types/recurrent_network.c</file>
             <file>file:/C:/Users/rkovalenko/Documents/NetBeansProjects/network_c/network_types/layer.h</file>
         </group>

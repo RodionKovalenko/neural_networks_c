@@ -184,14 +184,13 @@ void test_rrn_network() {
     int input_c = n_features;
 
     int n_h_layers = 1;
-    int n_h_neurons = 70;
-    int n_out_neurons = 2;
-
+    int n_h_neurons = 80;
+    int n_out_neurons = 3;
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.000006;
-    int num_iterations = 150;
+    double learning_rate = 0.006;
+    int num_iterations = 20;
     int training_mode = 2;
 
     // one-dimensional training and target dataset 
