@@ -184,8 +184,8 @@ void test_rrn_network() {
     int input_c = n_features;
 
     int n_h_layers = 1;
-    int n_h_neurons = 20;
-    int n_out_neurons = 4;
+    int n_h_neurons = 10;
+    int n_out_neurons = 2;
 
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
