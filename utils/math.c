@@ -469,7 +469,7 @@ double get_normalizing_constant(double **matrix1, double **matrix2, int row, int
     return 1.0 / normalizing_constant;
 }
 
-double **build_hessian(double **matrix_result, double **matrix1, int n_row, int n_col) {
+double **build_hessian(double **matrix_result, double **matrix1, double **matrix2, int n_row, int n_col) {
     int num_dims = n_row * n_col;
     int i, j, m, p, k, z;
 
@@ -480,7 +480,7 @@ double **build_hessian(double **matrix_result, double **matrix1, int n_row, int 
             m = (z % n_row);
             p = (z / n_row);
 
-            matrix_result[k][z] = matrix1[i][j] * matrix1[m][p];
+            matrix_result[k][z] = matrix1[i][j] * matrix2[m][p];
             // symmetric index has equal values in hessian matrix
             matrix_result[z][k] = matrix_result[k][z];
         }

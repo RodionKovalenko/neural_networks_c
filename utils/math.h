@@ -59,7 +59,7 @@ extern "C" {
     double **matrix_unflatten(double **matrix_to_apply, double **matrix, int row, int col);
     double **init_identity_matrix(double **matrix_to_apply, int row);
     double get_normalizing_constant(double **matrix1, double **matrix2, int row, int col);
-    double **build_hessian(double **matrix_result, double **matrix1, int n_row, int n_col);
+   double **build_hessian(double **matrix_result, double **matrix1, double **matrix2, int n_row, int n_col);
     double **multiply_with_hessian(double **matrix_result, double **hessian_mat, double **matrix1, int n_row, int n_col);
 
 

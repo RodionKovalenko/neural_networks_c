@@ -48,10 +48,17 @@ extern "C" {
         double **q_t;
         double **v_t;
         double **I;
-        double **G_t_next;
+        double **G_t_1;
+        double **G_t_2;
+        double **G_t;
         double **gradient_B_Hessian;
         double **gradient_W_Hessian;
         double **gradient_W_recurrent_Hessian;
+        // I - delta_t * q_t * v_t_T
+        double **hessian_1;
+        // I - delta_t * v_t * q_t_T
+        double **hessian_2;
+        int is_first_run_passed;
 
         double **adam_A;
         double **adam_B;
