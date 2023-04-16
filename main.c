@@ -71,6 +71,9 @@ double*** get_input_matrix_rnn(int n_batches, int input_r, int input_c) {
     double ***input_matrix = (double***) malloc(n_batches * (sizeof (double)));
     int i, j, k;
 
+    double min = -pow((6.0 / (double) (input_c + input_c)), 0.5);
+    double max = pow((6.0 / (double) (input_c + input_c)), 0.5);
+
     for (i = 0; i < n_batches; i++) {
         input_matrix[i] = (double**) malloc(input_r * sizeof (double));
 
@@ -79,13 +82,14 @@ double*** get_input_matrix_rnn(int n_batches, int input_r, int input_c) {
         }
     }
 
-        for (i = 0; i < n_batches; i++) {
-            for (j = 0; j < input_r; j++) {
-                for (k = 0; k < input_c; k++) {
-                    input_matrix[i][j][k] = ((i + 1) * (j + 1) * (k + 1)) % 100 + 2;
-                }
+    for (i = 0; i < n_batches; i++) {
+        for (j = 0; j < input_r; j++) {
+            for (k = 0; k < input_c; k++) {
+                //input_matrix[i][j][k] = ((i + 1) * (j + 1) * (k + 1)) % 100 + 2;
+                input_matrix[i][j][k] = (double) rand() * (max - min) / (double) RAND_MAX + min;
             }
         }
+    }
 
 
     return input_matrix;
@@ -95,6 +99,9 @@ double*** get_target_matrix_rnn(int n_batches, int input_r, int input_c) {
     double ***input_matrix = (double***) malloc(n_batches * (sizeof (double)));
     int i, j, k;
 
+    double min = -pow((6.0 / (double) (input_c + input_c)), 0.5);
+    double max = pow((6.0 / (double) (input_c + input_c)), 0.5);
+
     for (i = 0; i < n_batches; i++) {
         input_matrix[i] = (double**) malloc(input_r * sizeof (double));
 
@@ -103,13 +110,21 @@ double*** get_target_matrix_rnn(int n_batches, int input_r, int input_c) {
         }
     }
 
-        for (i = 0; i < n_batches; i++) {
-            for (j = 0; j < input_r; j++) {
-                for (k = 0; k < input_c; k++) {
-                    input_matrix[i][j][k] = (((i + 1) * (j + 1) * (k + 1)) + 3 * (i + j + 1)) % 30 + 0.5;
+    for (i = 0; i < n_batches; i++) {
+        for (j = 0; j < input_r; j++) {
+            for (k = 0; k < input_c; k++) {
+                //  input_matrix[i][j][k] = (((i + 1) * (j + 1) * (k + 1)) + 3 * (i + j + 1)) % 30 + 0.5;
+                input_matrix[i][j][k] = (double) rand() * (max - min) / (double) RAND_MAX + min;
+                
+                if (input_matrix[i][j][k] > 1.0) {
+                    input_matrix[i][j][k] -= 0.5;
+                }
+                  if (input_matrix[i][j][k] < -1.0) {
+                    input_matrix[i][j][k] += 0.5;
                 }
             }
         }
+    }
 
     return input_matrix;
 }
@@ -128,8 +143,8 @@ void testnetwork() {
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.01;
-    int num_iterations = 200;
+    double learning_rate = 0.1;
+    int num_iterations = 100;
     int training_mode = 0;
 
     // one-dimensional training and target dataset 
@@ -173,8 +188,8 @@ void testnetwork() {
 void test_rrn_network() {
     // number of data records
     int input_num_records;
-    int n_batches = 1;
-    int batch_size = 1;
+    int n_batches = 2;
+    int batch_size = 2;
     int n_features = 3;
 
     input_num_records = n_batches;
@@ -183,20 +198,20 @@ void test_rrn_network() {
     int input_r = 1;
     int input_c = n_features;
 
-    int n_h_layers = 1;
-    int n_h_neurons = 80;
+    int n_h_layers = 3;
+    int n_h_neurons = 100;
     int n_out_neurons = 3;
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.006;
-    int num_iterations = 20;
+    double learning_rate = 0.1;
+    int num_iterations = 6000;
     int training_mode = 2;
 
     // one-dimensional training and target dataset 
     double ***data_X = get_input_matrix_rnn(n_batches, batch_size, n_features);
     double ***target_Y = get_target_matrix_rnn(n_batches, batch_size, n_out_neurons);
-    double bottleneck_value = 0;
+    double bottleneck_value = 5;
 
     set_verbose(1);
     printf("start");
@@ -218,7 +233,7 @@ void test_rrn_network() {
             n_h_neurons,
             n_out_neurons,
             learning_rate,
-            LEAKY_RELU,
+            TANH,
             bottleneck_value,
             batch_size
             );
@@ -227,14 +242,14 @@ void test_rrn_network() {
     rnn.batch_size = batch_size;
     rnn.n_batches = n_batches;
     rnn.n_features = n_features;
-    rnn.minibatch_size = 1;
+    rnn.minibatch_size = 25;
 
-//    rnn.layers[1].bias[0][0] = 0;
-//    rnn.layers[2].bias[0][0] = 0;
-//    rnn.layers[1].weights[0][0] = 0.3;
-//    rnn.layers[1].recurrent_layer_weights[0][0] = 0.7;
-//    rnn.layers[2].weights[0][0] = 0.2;
-//    rnn.layers[2].weights[1][0] = 0.8;
+    //    rnn.layers[1].bias[0][0] = 0;
+    //    rnn.layers[2].bias[0][0] = 0;
+    //    rnn.layers[1].weights[0][0] = 0.3;
+    //    rnn.layers[1].recurrent_layer_weights[0][0] = 0.7;
+    //    rnn.layers[2].weights[0][0] = 0.2;
+    //    rnn.layers[2].weights[1][0] = 0.8;
 
     print_matrix_double_3d(data_X, n_batches, batch_size, n_features);
     print_matrix_double_3d(target_Y, n_batches, batch_size, n_out_neurons);

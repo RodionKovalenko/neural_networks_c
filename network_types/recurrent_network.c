@@ -119,7 +119,6 @@ struct layer* init_rnn_layers(
         hidden_layer->I = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
         hidden_layer->I = init_identity_matrix(hidden_layer->I, hidden_layer->num_outputs * hidden_layer->num_inputs);
         hidden_layer->G_t = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
-        //  hidden_layer->G_t = init_identity_matrix(hidden_layer->G_t, hidden_layer->num_outputs * hidden_layer->num_inputs);
         hidden_layer->G_t_1 = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
         hidden_layer->G_t_2 = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
         hidden_layer->hessian_1 = build_array(hidden_layer->num_outputs * hidden_layer->num_inputs, hidden_layer->num_outputs * hidden_layer->num_inputs);
@@ -170,7 +169,6 @@ struct layer* init_rnn_layers(
     output_layer->I = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
     output_layer->I = init_identity_matrix(output_layer->I, output_layer->num_outputs * output_layer->num_inputs);
     output_layer->G_t = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
-    // output_layer->G_t = init_identity_matrix(output_layer->G_t, output_layer->num_outputs * output_layer->num_inputs);
     output_layer->G_t_1 = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
     output_layer->G_t_2 = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
     output_layer->hessian_1 = build_array(output_layer->num_outputs * output_layer->num_inputs, output_layer->num_outputs * output_layer->num_inputs);
@@ -281,7 +279,6 @@ network* forward_sequence(network *rnn, double **data_X, int d) {
             }
 
             _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn->input_dims[1]);
-
             apply_activation(_layer, *rnn);
 
             _layer->layer_sequence_outputs[d] = copy_array(_layer->layer_sequence_outputs[d], _layer->outputs, _layer->num_outputs, rnn->input_dims[1]);
@@ -347,8 +344,7 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
     layer *_next_layer = _layer->next_layer;
     layer *_prev_layer = _layer->previous_layer;
     double derivative;
-    double normalizing_c;
-    int n_row_flattened = _layer->num_outputs * _layer->num_inputs;
+
 
     for (i = 0; i < n_row; i++) {
         for (k = 0; k < d; k++) {
@@ -381,35 +377,6 @@ network* calculate_jacobi_matrix_rnn(network *ffn, layer *_layer, double **targe
         }
     }
 
-    if (_layer->prev_gradients_W[0][0] != 0.0 && _layer->prev_weights[0][0] != 0.0 || _layer->is_first_run_passed) {
-        _layer->is_first_run_passed = 1;
-        _layer->q_t = matrix_subtract(_layer->q_t, _layer->weights, _layer->prev_weights, _layer->num_outputs, _layer->num_inputs);
-        _layer->v_t = matrix_subtract(_layer->v_t, _layer->gradients_W, _layer->prev_gradients_W, _layer->num_outputs, _layer->num_inputs);
-
-        normalizing_c = get_normalizing_constant(_layer->q_t, _layer->v_t, _layer->num_outputs, _layer->num_inputs);
-
-//        _layer->hessian_1 = build_hessian(_layer->hessian_1, _layer->q_t, _layer->v_t, _layer->num_outputs, _layer->num_inputs);
-//        _layer->hessian_1 = multiply_scalar(_layer->hessian_1, normalizing_c, n_row_flattened, n_row_flattened);
-//        _layer->hessian_1 = matrix_subtract(_layer->hessian_1, _layer->I, _layer->hessian_1, n_row_flattened, n_row_flattened);
-//
-//        _layer->hessian_2 = build_hessian(_layer->hessian_2, _layer->v_t, _layer->q_t, _layer->num_outputs, _layer->num_inputs);
-//        _layer->hessian_2 = multiply_scalar(_layer->hessian_2, normalizing_c, n_row_flattened, n_row_flattened);
-//        _layer->hessian_2 = matrix_subtract(_layer->hessian_2, _layer->I, _layer->hessian_2, n_row_flattened, n_row_flattened);
-//
-//        _layer->G_t_1 = apply_matrix_product(_layer->G_t_1, _layer->hessian_1, _layer->G_t, n_row_flattened, n_row_flattened, n_row_flattened);
-//        _layer->G_t_2 = apply_matrix_product(_layer->G_t_2, _layer->G_t_1, _layer->hessian_2, n_row_flattened, n_row_flattened, n_row_flattened);
-
-        _layer->G_t = build_hessian(_layer->G_t, _layer->q_t, _layer->q_t, _layer->num_outputs, _layer->num_inputs);
-        _layer->G_t = multiply_scalar(_layer->G_t, normalizing_c, n_row_flattened, n_row_flattened);
-        _layer->G_t = matrix_add_matrix(_layer->G_t, _layer->G_t_2, n_row_flattened, n_row_flattened);
-
-        _layer->gradient_W_Hessian = multiply_with_hessian(_layer->gradient_W_Hessian, _layer->G_t, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
-        
-        clear_array(_layer->G_t, n_row_flattened, n_row_flattened);
-    } else {
-        _layer->gradient_W_Hessian = copy_array(_layer->gradient_W_Hessian, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
-    }
-
     return ffn;
 }
 
@@ -422,6 +389,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
     double beta = 0.2;
     double lr = ffn->learning_rate;
     layer *_layer;
+    int update_method = (int) rand() * 1.5;
 
     if (ffn->num_records < ffn->minibatch_size) {
         normalizing_constant = (double) ffn->num_records;
@@ -429,6 +397,37 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
 
     for (l = ffn->n_h_layers + 1; l >= 1; l--) {
         _layer = &ffn->layers[l];
+
+        double normalizing_c;
+        int n_row_flattened = _layer->num_outputs * _layer->num_inputs;
+        if (_layer->prev_gradients_W[0][0] != 0.0 && _layer->prev_weights[0][0] != 0.0 || _layer->is_first_run_passed) {
+            _layer->is_first_run_passed = 1;
+            _layer->q_t = matrix_subtract(_layer->q_t, _layer->weights, _layer->prev_weights, _layer->num_outputs, _layer->num_inputs);
+            _layer->v_t = matrix_subtract(_layer->v_t, _layer->gradients_W, _layer->prev_gradients_W, _layer->num_outputs, _layer->num_inputs);
+
+            normalizing_c = get_normalizing_constant(_layer->q_t, _layer->v_t, _layer->num_outputs, _layer->num_inputs);
+
+            //            _layer->hessian_1 = build_hessian(_layer->hessian_1, _layer->q_t, _layer->v_t, _layer->num_outputs, _layer->num_inputs);
+            //            _layer->hessian_1 = multiply_scalar(_layer->hessian_1, normalizing_c, n_row_flattened, n_row_flattened);
+            //            _layer->hessian_1 = matrix_subtract(_layer->hessian_1, _layer->I, _layer->hessian_1, n_row_flattened, n_row_flattened);
+            //
+            //            _layer->hessian_2 = build_hessian(_layer->hessian_2, _layer->v_t, _layer->q_t, _layer->num_outputs, _layer->num_inputs);
+            //            _layer->hessian_2 = multiply_scalar(_layer->hessian_2, normalizing_c, n_row_flattened, n_row_flattened);
+            //            _layer->hessian_2 = matrix_subtract(_layer->hessian_2, _layer->I, _layer->hessian_2, n_row_flattened, n_row_flattened);
+            //
+            //            _layer->G_t_1 = apply_matrix_product(_layer->G_t_1, _layer->hessian_1, _layer->G_t, n_row_flattened, n_row_flattened, n_row_flattened);
+            //            _layer->G_t_2 = apply_matrix_product(_layer->G_t_2, _layer->G_t_1, _layer->hessian_2, n_row_flattened, n_row_flattened, n_row_flattened);
+
+            _layer->G_t = build_hessian(_layer->G_t, _layer->q_t, _layer->q_t, _layer->num_outputs, _layer->num_inputs);
+            _layer->G_t = multiply_scalar(_layer->G_t, normalizing_c, n_row_flattened, n_row_flattened);
+            _layer->G_t = matrix_add_matrix(_layer->G_t, _layer->G_t_2, n_row_flattened, n_row_flattened);
+
+            _layer->gradient_W_Hessian = multiply_with_hessian(_layer->gradient_W_Hessian, _layer->G_t, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+
+            clear_array(_layer->G_t, n_row_flattened, n_row_flattened);
+        } else {
+            _layer->gradient_W_Hessian = copy_array(_layer->gradient_W_Hessian, _layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+        }
 
         for (j = 0; j < _layer->num_outputs; j++) {
 
@@ -445,11 +444,15 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
 
                 switch (ffn->optimizer) {
                     case DEFAULT:
-                        //_layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
-                        _layer->weights[j][i] -= _layer->gradient_W_Hessian[j][i] * 0.9;
+                        // combination of Hessian optimization and gradient 
+                        if (update_method > 1) {
+                            _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
+                        } else {
+                            _layer->weights[j][i] -= _layer->gradient_W_Hessian[j][i] / normalizing_constant;
+                        }
                         break;
                     default:
-                        // _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
+                        _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
                         break;
                 }
 
@@ -460,7 +463,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
 
             switch (ffn->optimizer) {
                 case DEFAULT:
-                    // _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / normalizing_constant;
+                    _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / normalizing_constant;
                     break;
                 default:
                     _layer->bias[j][0] -= lr * _layer->gradients_B[j][0] / normalizing_constant;
@@ -473,6 +476,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
         clear_array(_layer->gradients, _layer->num_outputs, ffn->input_dims[1]);
         clear_array(_layer->gradients_recurrent, _layer->num_outputs, ffn->input_dims[1]);
         clear_array(_layer->gradients_W, _layer->num_outputs, _layer->num_inputs);
+        clear_array(_layer->gradient_W_Hessian, _layer->num_outputs, _layer->num_inputs);
 
         clear_array(ffn->errors, ffn->n_out_neurons, ffn->input_dims[1]);
         clear_array(_layer->gradients_B, _layer->num_outputs, 1);
