@@ -12,21 +12,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
 #include<time.h>
-#include<string.h>
-#include <math.h>
-#include <float.h>
-#include <limits.h>
-#include "../utils/activation.h"
-#include "../utils/verbose.h"
-#include "../network_types/layer.h"
+#include<math.h>
+
 #include "../network_types/network.h"
 #include "../network_types/feedforward_network.h"
 #include "../network_types/recurrent_network.h"
-#include "../utils/array.h"
-#include "../utils/activation.h"
 #include "../utils/optimizer.h"
+#include "../utils/activation.h"
+#include "../utils/verbose.h"
 #include "../utils/clear_memory.h"
 
 /*
