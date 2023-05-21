@@ -206,7 +206,7 @@ void test_rrn_network() {
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
     double learning_rate = 0.3;
-    int num_iterations = 6;
+    int num_iterations = 6000;
     int training_mode = 2;
 
     // one-dimensional training and target dataset 
