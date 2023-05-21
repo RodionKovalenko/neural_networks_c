@@ -265,7 +265,7 @@ network* forward_sequence(network *rnn, double **data_X, int d) {
                 layer_input = _prev_layer->outputs;
             }
 
-            outputs = _layer->layer_sequence_outputs[d];
+            outputs = copy_array(_layer->outputs, _layer->layer_sequence_outputs[d], _layer->num_outputs, rnn->input_dims[1]);
 
             if (_prev_layer->layer_index == 1) {
                 outputs = apply_matrix_product_transposed(outputs, _layer->weights, layer_input, _layer->num_outputs, rnn->input_dims[1], _layer->num_inputs);
@@ -275,7 +275,7 @@ network* forward_sequence(network *rnn, double **data_X, int d) {
 
             if (_layer->layer_sequence_outputs != NULL && _layer->recurrent_weights != NULL && d > 0 && (_layer->layer_index != rnn->n_h_layers + 2)) {
                 _layer->hidden_output_seq[d] = apply_matrix_product(_layer->hidden_output_seq[d], _layer->recurrent_weights, _layer->layer_sequence_outputs[d - 1], _layer->num_outputs, rnn->input_dims[1], _layer->num_outputs);
-                outputs = matrix_add_matrix(_layer->hidden_output_seq[d], outputs, _layer->num_outputs, rnn->input_dims[1]);
+                outputs = matrix_add_matrix(outputs, _layer->hidden_output_seq[d], _layer->num_outputs, rnn->input_dims[1]);
             }
 
             _layer->outputs = matrix_add_bias(outputs, _layer->bias, _layer->num_outputs, rnn->input_dims[1]);
@@ -389,7 +389,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
     double beta = 0.2;
     double lr = ffn->learning_rate;
     layer *_layer;
-    int update_method = (int) rand() * 1.5;
+    int update_method = (int) rand() * 2;
 
     if (ffn->num_records < ffn->minibatch_size) {
         normalizing_constant = (double) ffn->num_records;
@@ -448,7 +448,7 @@ network* update_weights_rnn(network *ffn, int i_iteration) {
                         if (update_method > 1) {
                             _layer->weights[j][i] -= (lr * _layer->gradients_W[j][i]) / normalizing_constant;
                         } else {
-                            _layer->weights[j][i] -= _layer->gradient_W_Hessian[j][i] / normalizing_constant;
+                            _layer->weights[j][i] -= (_layer->gradient_W_Hessian[j][i] / normalizing_constant);
                         }
                         break;
                     default:

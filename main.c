@@ -27,6 +27,7 @@
 #include "utils/activation.h"
 #include "utils/optimizer.h"
 #include "utils/clear_memory.h"
+#include "utils/json/jsmn.h"
 
 double** get_input_matrix(int input_r, int input_c) {
     double **input_matrix = (double**) malloc(input_r * (sizeof (double)));
@@ -115,11 +116,11 @@ double*** get_target_matrix_rnn(int n_batches, int input_r, int input_c) {
             for (k = 0; k < input_c; k++) {
                 //  input_matrix[i][j][k] = (((i + 1) * (j + 1) * (k + 1)) + 3 * (i + j + 1)) % 30 + 0.5;
                 input_matrix[i][j][k] = (double) rand() * (max - min) / (double) RAND_MAX + min;
-                
+
                 if (input_matrix[i][j][k] > 1.0) {
                     input_matrix[i][j][k] -= 0.5;
                 }
-                  if (input_matrix[i][j][k] < -1.0) {
+                if (input_matrix[i][j][k] < -1.0) {
                     input_matrix[i][j][k] += 0.5;
                 }
             }
@@ -188,9 +189,9 @@ void testnetwork() {
 void test_rrn_network() {
     // number of data records
     int input_num_records;
-    int n_batches = 2;
-    int batch_size = 2;
-    int n_features = 3;
+    int n_batches = 6;
+    int batch_size = 3;
+    int n_features = 5;
 
     input_num_records = n_batches;
 
@@ -198,14 +199,14 @@ void test_rrn_network() {
     int input_r = 1;
     int input_c = n_features;
 
-    int n_h_layers = 3;
-    int n_h_neurons = 100;
+    int n_h_layers = 1;
+    int n_h_neurons = 50;
     int n_out_neurons = 3;
     int num_dim[] = {input_num_records, input_r, input_c};
     int num_dim_params = sizeof (num_dim) / sizeof (int);
 
-    double learning_rate = 0.1;
-    int num_iterations = 6000;
+    double learning_rate = 0.3;
+    int num_iterations = 6;
     int training_mode = 2;
 
     // one-dimensional training and target dataset 

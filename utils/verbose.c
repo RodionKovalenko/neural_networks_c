@@ -17,6 +17,7 @@ void print_matrix_double_3d(double ***matrix, int rows, int columns, int n_value
     for (i = 0; i < rows; i++) {
         for (j = 0; j < columns; j++) {
             for (k = 0; k < n_values; k++) {
+                //printf(" %f, ", matrix[i][j][k]));
                 printf(" %f, ", *(*(*(matrix + i) + j) + k));
             }
 
